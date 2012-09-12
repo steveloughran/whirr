@@ -33,42 +33,60 @@ function configure_hdp_hadoop() {
   make_hadoop_dirs /data*
 
   # Copy generated configuration files in place
-  cp /tmp/{core,hdfs,mapred}-site.xml $HADOOP_CONF_DIR
-  cp /tmp/hadoop-env.sh $HADOOP_CONF_DIR
-  cp /tmp/hadoop-metrics.properties $HADOOP_CONF_DIR
+  cp /tmp/{core,hdfs,mapred}-site.xml $HADOOP_CONF_DIR || exit 1;
+  cp /tmp/hadoop-env.sh $HADOOP_CONF_DIR || exit 1;
+  cp /tmp/hadoop-metrics.properties $HADOOP_CONF_DIR  || exit 1;
 
-  # Keep PID files in a non-temporary directory
-#  HADOOP_PID_DIR=$(. /tmp/hadoop-env.sh; echo $HADOOP_PID_DIR)
-#  HADOOP_PID_DIR=${HADOOP_PID_DIR:-/var/run/hadoop}
-#  mkdir -p $HADOOP_PID_DIR
-#  chgrp -R hadoop $HADOOP_PID_DIR
-#  chmod -R g+w $HADOOP_PID_DIR
-#
-#  HDFS_PID_DIR=$HADOOP_PID_DIR/hdfs
-#  mkdir -p $HDFS_PID_DIR
-#  chgrp -R hadoop $HDFS_PID_DIR
-#  chmod -R g+w $HDFS_PID_DIR
-#  chown -R hdfs $HDFS_PID_DIR
-#
-#  MR_PID_DIR=$HADOOP_PID_DIR/hdfs
-#  mkdir -p $MR_PID_DIR
-#  chgrp -R mapred $MR_PID_DIR
-#  chmod -R g+w $MR_PID_DIR
-#  chown -R mapred $MR_PID_DIR
+#  Keep PID files in a non-temporary directory
+  HADOOP_PID_DIR=$(. /tmp/hadoop-env.sh; echo $HADOOP_PID_DIR)
+  HADOOP_PID_DIR=${HADOOP_PID_DIR:-/var/run/hadoop}
+  mkdir -p $HADOOP_PID_DIR
+  chown -R hadoop:hadoop $HADOOP_PID_DIR
+  chmod -R g+w $HADOOP_PID_DIR  || exit 1;
 
-  # Create the actual log dir
-#  mkdir -p /data/hadoop/logs
-#  chgrp -R hadoop /data/hadoop/logs
-#  chmod -R g+w /data/hadoop/logs
+  HDFS_PID_DIR=$HADOOP_PID_DIR/hdfs
+  mkdir -p $HDFS_PID_DIR
+  chown -R hdfs:hadoop $HDFS_PID_DIR || exit 1;
+  chmod -R g+w $HDFS_PID_DIR
 
-  # Create a symlink at $HADOOP_LOG_DIR
-#  HADOOP_LOG_DIR=$(. /tmp/hadoop-env.sh; echo $HADOOP_LOG_DIR)
-#  HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-/var/log/hadoop/logs}
-#  rm -rf $HADOOP_LOG_DIR
-#  mkdir -p $(dirname $HADOOP_LOG_DIR)
-#  ln -s /data/hadoop/logs $HADOOP_LOG_DIR
-#  chgrp -R hadoop $HADOOP_LOG_DIR
-#  chmod -R g+w $HADOOP_LOG_DIR
+  MR_PID_DIR=$HADOOP_PID_DIR/mapred
+  mkdir -p $MR_PID_DIR
+  chown -R mapred:hadoop $MR_PID_DIR  || exit 1;
+  chmod -R g+w $MR_PID_DIR
+
+#  Create the actual log dir
+  local data_log_dir=/data/hadoop/logs
+  mkdir -p $data_log_dir
+  chgrp -R hadoop data_log_dir  || exit 1;
+  chmod -R g+w data_log_dirs  || exit 1;
+
+#  Create a symlink at $HADOOP_LOG_DIR
+  HADOOP_LOG_DIR=$(. /tmp/hadoop-env.sh; echo $HADOOP_LOG_DIR)
+  HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-/var/log/hadoop}
+  rm -rf $HADOOP_LOG_DIR
+  mkdir -p $(dirname $HADOOP_LOG_DIR)
+
+  ln -s $data_log_dir $HADOOP_LOG_DIR
+  chown -R hadoop:hadoop $HADOOP_LOG_DIR
+  chmod -R g+w $HADOOP_LOG_DIR
+  chown -R hadoop:hadoop $HADOOP_LOG_DIR
+  chmod -R g+w $HADOOP_LOG_DIR
+
+  #hdfs log dir
+  local dfs_log_dir
+  dfs_log_dir=${data_log_dir}/hdfs
+  mkdir -p  $dfs_log_dir
+  chown -R hdfs:hadoop $dfs_log_dir
+  chmod -R g+w $dfs_log_dir
+  
+  #mapred log dir
+  local mapred_log_dir
+  mapred_log_dir=${data_log_dir}/mapred
+  mkdir -p  $mapred_log_dir
+  chown -R mapred:hadoop $mapred_log_dir
+  chmod -R g+w $mapred_log_dir
+  # root dir is for audit logs
+  mkdir -p ${data_log_dir}/root
 
   echo "Roles=$ROLES"
   if [ $(echo "$ROLES" | grep "hadoop-namenode" | wc -l) -gt 0 ]; then
@@ -97,7 +115,7 @@ function configure_hdp_hadoop() {
     esac
   done
   
-    CONFIGURE_HADOOP_DONE=1
+  CONFIGURE_HADOOP_DONE=1
   
 }
 
@@ -122,21 +140,28 @@ function start_namenode() {
 #    # Format HDFS
 #    [ ! -e /data/hadoop/hdfs ] && $AS_HDFS "$HADOOP namenode -format"
 #  elif which rpm &> /dev/null; then
-    echo "installing hadoop-namenode"
-    retry_yum install -y hadoop-namenode
-    AS_HDFS="/sbin/runuser -s /bin/bash - hdfs -c"
-    
-    BIN_HADOOP="$HADOOP_HOME/bin/hadoop"
-    
-    # Format HDFS
-    echo "formatting HDFS"
-    [ ! -e /data/hadoop/hdfs ] && $AS_HDFS "$BIN_HADOOP namenode -format"
+  echo "installing hadoop-namenode"
+  retry_yum install -y hadoop-namenode
+  AS_HDFS="/sbin/runuser -s /bin/bash - hdfs -c"
+  
+  BIN_HADOOP="$HADOOP_HOME/bin/hadoop"
+  
+  # Format HDFS
+  echo "formatting HDFS"
+  [ ! -e /data/hadoop/hdfs ] && $AS_HDFS "$BIN_HADOOP namenode -format"
 #  fi
 
   echo "starting service"
 
   service hadoop-namenode start
-
+  retval=$?
+  if ((${retval} == 0))
+  then
+    echo "Namenode is started"
+  else
+    echo "Namenode failed with return code ${retval}"
+    exit ${retval};
+  fi
   echo "Creating initial HDFS structure"
 
   $AS_HDFS "$BIN_HADOOP dfsadmin -safemode wait"
@@ -167,7 +192,7 @@ function start_hadoop_daemon() {
 #  if which dpkg &> /dev/null; then
 #    retry_apt_get -y install $daemon
 #  elif which rpm &> /dev/null; then
-    retry_yum install -y $daemon
+  retry_yum install -y $daemon
 #  fi
   echo "Starting $daemon"
   service $daemon start
@@ -176,8 +201,21 @@ function start_hadoop_daemon() {
   then
     echo "Service $daemon is started"
   else
-    ocf_log err "Service $daemon failed with return code ${retval}"
+    echo "Service $daemon failed with return code ${retval}"
     exit 1;
   fi
+  
+#  now do a service status check to verify the service is live
+  echo "pinging $daemon"
+  service $daemon status
+  retval=$?
+  if ((${retval} == 0))
+  then
+    echo "Service $daemon is started"
+  else
+    echo "Service $daemon failed with return code ${retval}"
+    exit 1;
+  fi
+  
 }
 

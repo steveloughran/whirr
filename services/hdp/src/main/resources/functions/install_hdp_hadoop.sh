@@ -52,6 +52,8 @@ EOF
 function install_hdp_hadoop() {
   local OPTIND
   local OPTARG
+  local retval
+
   HDP_VERSION=1.0.0.12
   REPO=${REPO:-hdp1}
   REPO_HOST=${REPO_HOST:-public-repo-1.hortonworks.com}
@@ -78,12 +80,49 @@ function install_hdp_hadoop() {
   retry_yum install -y $HADOOP_PACKAGE
   
   #copy conf.empty to the new dir
-  cp -r /etc/hadoop/conf.empty $HADOOP_CONF_DIR
   
+  if ! cp -r /etc/hadoop/conf.empty $HADOOP_CONF_DIR;
+  then
+    echo "Failed to create configuration dir"
+    exit 1;
+  fi
   # and switch over to it
   echo "Hadoop installed: switching to version in $HADOOP_CONF_DIR"
   alternatives --install /etc/hadoop/conf hadoop-conf $HADOOP_CONF_DIR 90
 #  fi
   
+  
+
+
+  #Add a group. In the absence of an easy way to see if the group is there,
+  #the error code 9, "duplicate group name" is taken as a sign of existence,
+  #so making this operation idempotent
+  groupadd -r hadoop
+  retval=$?
+  if ((${retval} != 0 && ${retval} != 9))
+  then
+    echo "adding group hadoop failed with return code ${retval}"
+    exit 1;
+  fi
+
+  #  set up user accounts
+#mapred:x:105:160:Hadoop MapReduce:/usr/lib/hadoop:/bin/bash
+#hdfs:x:106:159:Hadoop HDFS:/usr/lib/hadoop:/bin/bash
+
+  if ! id mapred ; then
+    if ! useradd -c "Hadoop MapReduce" --system --user-group --home /usr/lib/hadoop -M mapred;
+    then
+      echo "Failed to add user mapred"
+      exit 1;
+    fi
+  fi
+  if ! id hdfs ; then
+    if ! useradd -c "Hadoop MapReduce" --system --user-group --home /usr/lib/hadoop -M mapred;
+    then
+      echo "Failed to add user mapred"
+      exit 1;
+    fi
+  fi
+
   INSTALL_HADOOP_DONE=1
 }

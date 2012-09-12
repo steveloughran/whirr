@@ -34,7 +34,7 @@ Caused by: java.lang.IndexOutOfBoundsException: toIndex = 1
 	... 4 more
 
 
-ffailure of the JT to start up due to a bad user name doesn't get picked up:
+Failure of the JT to start up due to a bad user name doesn't get picked up:
 
 + break
 + return 0
