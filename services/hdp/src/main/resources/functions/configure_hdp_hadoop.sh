@@ -57,8 +57,8 @@ function configure_hdp_hadoop() {
 #  Create the actual log dir
   local data_log_dir=/data/hadoop/logs
   mkdir -p $data_log_dir
-  chgrp -R hadoop data_log_dir  || exit 1;
-  chmod -R g+w data_log_dirs  || exit 1;
+  chgrp -R hadoop $data_log_dir  || exit 1;
+  chmod -R g+w $data_log_dir  || exit 1;
 
 #  Create a symlink at $HADOOP_LOG_DIR
   HADOOP_LOG_DIR=$(. /tmp/hadoop-env.sh; echo $HADOOP_LOG_DIR)

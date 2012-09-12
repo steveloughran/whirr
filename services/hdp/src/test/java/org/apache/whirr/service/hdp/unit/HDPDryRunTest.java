@@ -25,14 +25,18 @@ import com.jcraft.jsch.JSchException;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.BaseServiceDryRunTest;
-import org.apache.whirr.service.hdp.HdpConstants;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class HDPDryRunTest extends BaseServiceDryRunTest implements HdpConstants {
+import static org.apache.whirr.service.hdp.hadoop.HdpConstants.HDP_CONFIGURE_FUNCTION;
+import static org.apache.whirr.service.hdp.hadoop.HdpConstants.HDP_INSTALL_FUNCTION;
+import static org.apache.whirr.service.hdp.hadoop.HdpConstants.WHIRR_HADOOP_CONFIGURE_FN_KEY;
+import static org.apache.whirr.service.hdp.hadoop.HdpConstants.WHIRR_HADOOP_INSTALL_FN_KEY;
+
+public class HDPDryRunTest extends BaseServiceDryRunTest {
 
   @Override
   protected Set<String> getInstanceRoles() {

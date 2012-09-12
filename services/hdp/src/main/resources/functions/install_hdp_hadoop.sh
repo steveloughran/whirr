@@ -64,7 +64,7 @@ function install_hdp_hadoop() {
   HADOOP_CONF_DIR=/etc/hadoop/conf.whirr
 
 # package version to use w/ yum
-  HADOOP_PACKAGE=hadoop-${HADOOP_VERSION}
+  HADOOP_PACKAGE=hadoop
 
   echo "about to install $HADOOP_PACKAGE from HDP release $HDP_VERSION"
 
@@ -78,12 +78,17 @@ function install_hdp_hadoop() {
 #  elif which rpm &> /dev/null; then
   echo "about to install $HADOOP_PACKAGE"
   retry_yum install -y $HADOOP_PACKAGE
+  if ! retry_yum install -y $HADOOP_PACKAGE;
+  then
+    echo "Failed to Install $HADOOP_PACKAGE from yum"
+    exit 1;
+  fi
   
   #copy conf.empty to the new dir
   
   if ! cp -r /etc/hadoop/conf.empty $HADOOP_CONF_DIR;
   then
-    echo "Failed to create configuration dir"
+    echo "Failed to create configuration dir $HADOOP_CONF_DIR"
     exit 1;
   fi
   # and switch over to it
