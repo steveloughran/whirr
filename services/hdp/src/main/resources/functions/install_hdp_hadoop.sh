@@ -133,15 +133,16 @@ function install_hdp_hadoop() {
 
   getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 490 -r hadoop
 
-  if ! id mapred ; then
-    if ! useradd -c "Hadoop MapReduce" --system --user-group --home /usr/lib/hadoop -u 495 --shell /bin/bash -M mapred;
+  if ! id hdfs ; then
+    if ! useradd -c "Hadoop HDFS" --system --user-group --home /usr/lib/hadoop -u 494 --shell /bin/bash -M mapred;
     then
-      echo "Failed to add user mapred"
+      echo "Failed to add user hdfs"
       exit 1;
     fi
   fi
-  if ! id hdfs ; then
-    if ! useradd -c "Hadoop HDFS" --system --user-group --home /usr/lib/hadoop -u 494 --shell /bin/bash -M mapred;
+
+  if ! id mapred ; then
+    if ! useradd -c "Hadoop MapReduce" --system --user-group --home /usr/lib/hadoop -u 495 --shell /bin/bash -M mapred;
     then
       echo "Failed to add user mapred"
       exit 1;
