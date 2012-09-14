@@ -45,7 +45,7 @@ EOF
   echo "installed new repo file ${REPOFILE} with repository ${baseurl}"
   
   echo "About to update yum"
-  retry_yum update -y retry_yum
+  retry_yum update -y 
 #  fi
 }
 
@@ -63,8 +63,7 @@ function install_hdp_hadoop() {
   #HADOOP_CONF_DIR=$HADOOP_HOME/conf
   HADOOP_CONF_DIR=/etc/hadoop/conf.whirr
 
-# package version to use w/ yum
-  HADOOP_PACKAGE=hadoop
+  HADOOP_PACKAGE="hadoop hadoop-native"
 
   echo "about to install $HADOOP_PACKAGE from HDP release $HDP_VERSION"
 
@@ -102,32 +101,53 @@ function install_hdp_hadoop() {
   #Add a group. In the absence of an easy way to see if the group is there,
   #the error code 9, "duplicate group name" is taken as a sign of existence,
   #so making this operation idempotent
-  groupadd -r hadoop
-  retval=$?
-  if ((${retval} != 0 && ${retval} != 9))
-  then
-    echo "adding group hadoop failed with return code ${retval}"
-    exit 1;
-  fi
+#  groupadd -r hadoop
+#  retval=$?
+#  if ((${retval} != 0 && ${retval} != 9))
+#  then
+#    echo "adding group hadoop failed with return code ${retval}"
+#    exit 1;
+#  fi
 
   #  set up user accounts
+#hadoop
 #mapred:x:105:160:Hadoop MapReduce:/usr/lib/hadoop:/bin/bash
 #hdfs:x:106:159:Hadoop HDFS:/usr/lib/hadoop:/bin/bash
 
+
+#This is what the Hadoop RPM does
+#getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 123 -r hadoop
+#
+#/usr/sbin/useradd --comment "Hadoop MapReduce" -u 202 --shell /bin/bash -M -r -g hadoop --home /tmp mapred 2> /dev/null || :
+#/usr/sbin/useradd --comment "Hadoop HDFS" -u 201 --shell /bin/bash -M -r -g hadoop --home /tmp hdfs 2> /dev/null || :
+
+#  if ! id hadoop ; then
+#    if ! useradd -c "Hadoop" --system --user-group --home /usr/lib/hadoop -M hadoop;
+#    then
+#      echo "Failed to add user hadoop"
+#      exit 1;
+#    else 
+#      echo "created user Hadoop"
+#    fi
+#  fi
+
+  getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 490 -r hadoop
+
   if ! id mapred ; then
-    if ! useradd -c "Hadoop MapReduce" --system --user-group --home /usr/lib/hadoop -M mapred;
+    if ! useradd -c "Hadoop MapReduce" --system --user-group --home /usr/lib/hadoop -u 495 --shell /bin/bash -M mapred;
     then
       echo "Failed to add user mapred"
       exit 1;
     fi
   fi
   if ! id hdfs ; then
-    if ! useradd -c "Hadoop MapReduce" --system --user-group --home /usr/lib/hadoop -M mapred;
+    if ! useradd -c "Hadoop HDFS" --system --user-group --home /usr/lib/hadoop -u 494 --shell /bin/bash -M mapred;
     then
       echo "Failed to add user mapred"
       exit 1;
     fi
   fi
 
+  echo "Hadoop RPM installation and user configuration complete"
   INSTALL_HADOOP_DONE=1
 }

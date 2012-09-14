@@ -41,7 +41,7 @@ function configure_hdp_hadoop() {
   HADOOP_PID_DIR=$(. /tmp/hadoop-env.sh; echo $HADOOP_PID_DIR)
   HADOOP_PID_DIR=${HADOOP_PID_DIR:-/var/run/hadoop}
   mkdir -p $HADOOP_PID_DIR
-  chown -R hadoop:hadoop $HADOOP_PID_DIR
+  chown -R hdfs:hadoop $HADOOP_PID_DIR  || exit 1;
   chmod -R g+w $HADOOP_PID_DIR  || exit 1;
 
   HDFS_PID_DIR=$HADOOP_PID_DIR/hdfs
