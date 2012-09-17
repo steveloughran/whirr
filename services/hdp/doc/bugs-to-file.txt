@@ -51,3 +51,32 @@ head: cannot open `/var/log/hadoop/logs/hadoop-hadoop-jobtracker-nn1.hortonworks
 + cat
 + cat
 + cat
+
+WHIRR-656:
+
+HDFS directory creation can deadlock if the cluster being brought up is single node & preformatted
+
+affects: services/hadoop; services/cdh
+
+
+If you have a single node cluster & there already exists a pre-formatted filesystem
+then the install process can deadlock in dfs directory creation
+
+If you have a single node cluster: 
+{code}
+whirr.instance-templates=1 hadoop-namenode+hadoop-datanode
+{code}
+
+then the install process can deadlock in directory creation -if there already exists a pre-formatted filesystem.
+
+Conditions:
+#there already exists a preformatted FS
+#the only DN coming up is on the same machine
+
+In this scenario, 
+# the {{start_namenode()}} function can block as dfsadmin waits to come out of safemode, 
+# NN will only do that once the block count is high enough 
+# the DN isn't started until the NN is started
+# result: deadlock
+
+Fix: don't create the dir structure if the FS was already there.

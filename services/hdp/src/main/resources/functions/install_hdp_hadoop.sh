@@ -18,6 +18,11 @@ set -x
 
 # this requires that install_hdp_hadoop() has already set up
 # the relevant env variables
+#
+#http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos5/hdp.repo
+#http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos6/hdp.repo
+#http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/suse11/hdp.repo
+
 function register_hortonworks_repo() {
 
 #  if which dpkg &> /dev/null; then
@@ -30,7 +35,7 @@ function register_hortonworks_repo() {
 #  elif which rpm &> /dev/null; then
   rm -f /etc/yum.repos.d/hdp*.repo
   local REPOFILE=/etc/yum.repos.d/hdp-whirr-${REPO}-${HDP_VERSION}.repo
-  local baseurl="http://${REPO_HOST}/HDP-${HDP_VERSION}/repos/centos5"
+  local baseurl="http://${REPO_HOST}/HDP-${HDP_VERSION}/repos/${OS_VERSION}"
   cat > $REPOFILE << EOF
 [hdp-${REPO}]
 name=Hortonworks Data Platform Version - HDP-${HDP_VERSION}
@@ -54,10 +59,13 @@ function install_hdp_hadoop() {
   local OPTARG
   local retval
 
-  HDP_VERSION=1.0.0.12
+  HDP_VERSION=1.1.0.15
   REPO=${REPO:-hdp1}
   REPO_HOST=${REPO_HOST:-public-repo-1.hortonworks.com}
   HADOOP_VERSION=${HADOOP_VERSION:-1.0.3-1}
+  
+  #OS version to use. Also: centos5; suse11
+  OS_VERSION=centos6
   HADOOP=hadoop-${HADOOP_VERSION}
   HADOOP_HOME=/usr/lib/hadoop
   #HADOOP_CONF_DIR=$HADOOP_HOME/conf

@@ -148,10 +148,18 @@ function start_namenode() {
   
   # Format HDFS
   echo "formatting HDFS"
-  [ ! -e /data/hadoop/hdfs ] && $AS_HDFS "$BIN_HADOOP namenode -format"
+  local new_namenode
+  if [ -e /data/hadoop/hdfs ];
+  then
+    new_namenode=0;
+  else
+    new_namenode=1;
+    $AS_HDFS "$BIN_HADOOP namenode -format" || exit 1
+    
+  fi
 #  fi
 
-  echo "starting service"
+  echo "starting hadoop-namenode"
 
   service hadoop-namenode start
   retval=$?
@@ -162,25 +170,28 @@ function start_namenode() {
     echo "Namenode failed with return code ${retval}"
     exit ${retval};
   fi
-  echo "Creating initial HDFS structure"
-
-  $AS_HDFS "$BIN_HADOOP dfsadmin -safemode wait"
-  $AS_HDFS "$BIN_HADOOP fs -mkdir /user"
-  # The following is questionable, as it allows a user to delete another user
-  # It's needed to allow users to create their own user directories
-  $AS_HDFS "$BIN_HADOOP fs -chmod +w /user"
-  $AS_HDFS "$BIN_HADOOP fs -mkdir /hadoop"
-  $AS_HDFS "$BIN_HADOOP fs -chmod +w /hadoop"
-  $AS_HDFS "$BIN_HADOOP fs -mkdir /hbase"
-  $AS_HDFS "$BIN_HADOOP fs -chmod +w /hbase"
-  $AS_HDFS "$BIN_HADOOP fs -mkdir /mnt"
-  $AS_HDFS "$BIN_HADOOP fs -chmod +w /mnt"
-
-  # Create temporary directory for Pig and Hive in HDFS
-  $AS_HDFS "$BIN_HADOOP fs -mkdir /tmp"
-  $AS_HDFS "$BIN_HADOOP fs -chmod +w /tmp"
-  $AS_HDFS "$BIN_HADOOP fs -mkdir /user/hive/warehouse"
-  $AS_HDFS "$BIN_HADOOP fs -chmod +w /user/hive/warehouse"
+  
+  if ((${new_namenode} ==1))
+  then
+    echo "Creating initial HDFS structure"
+    $AS_HDFS "$BIN_HADOOP dfsadmin -safemode wait"
+    $AS_HDFS "$BIN_HADOOP fs -mkdir /user"
+    # The following is questionable, as it allows a user to delete another user
+    # It's needed to allow users to create their own user directories
+    $AS_HDFS "$BIN_HADOOP fs -chmod +w /user"
+    $AS_HDFS "$BIN_HADOOP fs -mkdir /hadoop"
+    $AS_HDFS "$BIN_HADOOP fs -chmod +w /hadoop"
+    $AS_HDFS "$BIN_HADOOP fs -mkdir /hbase"
+    $AS_HDFS "$BIN_HADOOP fs -chmod +w /hbase"
+    $AS_HDFS "$BIN_HADOOP fs -mkdir /mnt"
+    $AS_HDFS "$BIN_HADOOP fs -chmod +w /mnt"
+  
+    # Create temporary directory for Pig and Hive in HDFS
+    $AS_HDFS "$BIN_HADOOP fs -mkdir /tmp"
+    $AS_HDFS "$BIN_HADOOP fs -chmod +w /tmp"
+    $AS_HDFS "$BIN_HADOOP fs -mkdir /user/hive/warehouse"
+    $AS_HDFS "$BIN_HADOOP fs -chmod +w /user/hive/warehouse"
+  fi
 }
 
 #Start the hadoop daemon -failure to do so triggers a script failure
