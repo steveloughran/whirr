@@ -187,7 +187,12 @@ public abstract class ScriptBasedClusterAction extends ClusterAction {
     }
     for (Future<ExecResponse> future : futures) {
       try {
-        future.get();
+        ExecResponse execResponse = future.get();
+        if (execResponse.getExitStatus() != 0) {
+          //the script has failed
+          LOG.error("Execution failed {}", execResponse);
+          throw new IOException("Execution failure: " + execResponse);
+        }
       } catch (ExecutionException e) {
         throw new IOException(e.getCause());
       }
