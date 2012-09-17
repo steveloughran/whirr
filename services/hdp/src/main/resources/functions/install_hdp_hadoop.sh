@@ -131,23 +131,24 @@ function install_hdp_hadoop() {
 #    fi
 #  fi
 
-  getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 490 -r hadoop
 
-  if ! id hdfs ; then
-    if ! useradd -c "Hadoop HDFS" --system --user-group --home /usr/lib/hadoop -u 494 --shell /bin/bash -M mapred;
-    then
-      echo "Failed to add user hdfs"
-      exit 1;
-    fi
-  fi
+#Create the groups
+getent group hadoop >/dev/null || groupadd -r hadoop
+getent group hdfs >/dev/null   || groupadd -r hdfs
+getent group mapred >/dev/null || groupadd -r mapred
 
-  if ! id mapred ; then
-    if ! useradd -c "Hadoop MapReduce" --system --user-group --home /usr/lib/hadoop -u 495 --shell /bin/bash -M mapred;
-    then
-      echo "Failed to add user mapred"
-      exit 1;
-    fi
-  fi
+# Create a mapred user if one does not already exist.
+
+getent passwd mapred >/dev/null  \
+  || /usr/sbin/useradd --comment "Hadoop MapReduce" --shell /bin/bash -M -r -g mapred -G hadoop --home %{lib_hadoop} mapred \
+  || exit 1
+
+# Create an hdfs user if one does not already exist.
+getent passwd hdfs >/dev/null \
+  || /usr/sbin/useradd --comment "Hadoop HDFS" --shell /bin/bash -M -r -g hdfs -G hadoop --home %{lib_hadoop} hdfs \
+  || exit 1
+
+
 
   echo "Hadoop RPM installation and user configuration complete"
   INSTALL_HADOOP_DONE=1
