@@ -148,14 +148,18 @@ function start_namenode() {
   
   # Format HDFS
   echo "formatting HDFS"
+  #need to know the location of the filesystem, which
+  #is driven by the site xml settings.
+  local dfsdir=/data/tmp/hadoop-hdfs/dfs 
   local new_namenode
-  if [ -e /data/hadoop/hdfs ];
+  if [ -e $dfsdir ];
   then
-    new_namenode=0;
+    echo "The namenode filesystem under $dfsdir already exists"
+    new_namenode=0
   else
-    new_namenode=1;
+    echo "The namenode filesystem under $dfsdir was not found -reformatting the namenode"
+    new_namenode=1
     $AS_HDFS "$BIN_HADOOP namenode -format" || exit 1
-    
   fi
 #  fi
 
@@ -171,7 +175,7 @@ function start_namenode() {
     exit ${retval};
   fi
   
-  if ((${new_namenode} ==1))
+  if ((${new_namenode} == 1))
   then
     echo "Creating initial HDFS structure"
     $AS_HDFS "$BIN_HADOOP dfsadmin -safemode wait"
