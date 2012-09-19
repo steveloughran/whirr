@@ -115,22 +115,23 @@
       <artifactId>dnsjava</artifactId>
     </dependency>
 
+    <!-- the artifacts we pull in here are the Apache releases-->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
-      <version>${hadoop.version}</version>
+      <version>1.0.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-examples</artifactId>
-      <version>${hadoop.version}</version>
+      <version>1.0.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-test</artifactId>
-      <version>${hadoop.version}</version>
+      <version>1.0.3</version>
       <scope>test</scope>
     </dependency>
 
