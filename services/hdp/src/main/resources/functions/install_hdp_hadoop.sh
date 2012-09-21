@@ -19,6 +19,8 @@ set -x
 # this requires that install_hdp_hadoop() has already set up
 # the relevant env variables
 #
+# the layout is OS-specific; this script only supports Centos6, unless OS_VERSION is changed,
+#
 #http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos5/hdp.repo
 #http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos6/hdp.repo
 #http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/suse11/hdp.repo
@@ -43,12 +45,12 @@ baseurl=${baseurl}
 gpgcheck=0
 enabled=1
 priority=1
-#gpgkey = http://$REPO_HOST/redhat/TBD
+gpgcheck=1
+gpgkey=http://${baseurl}/RPM-GPG-KEY-Jenkins
 
 EOF
 
   echo "installed new repo file ${REPOFILE} with repository ${baseurl}"
-  
   echo "About to update yum"
   retry_yum update -y 
 #  fi
@@ -103,9 +105,6 @@ function install_hdp_hadoop() {
   alternatives --install /etc/hadoop/conf hadoop-conf $HADOOP_CONF_DIR 90
 #  fi
   
-  
-
-
   #Add a group. In the absence of an easy way to see if the group is there,
   #the error code 9, "duplicate group name" is taken as a sign of existence,
   #so making this operation idempotent
