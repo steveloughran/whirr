@@ -71,10 +71,13 @@ public class AmbariClusterActionHandler extends
     LOG.info("Authorizing firewall");
     Set<Cluster.Instance> instances = cluster.getInstancesMatching(role(AmbariConstants.ROLE));
     if (instances.isEmpty()) {
-      throw new BadDeploymentException("No " + AmbariConstants.ROLE + " instance in cluster");
+      throw new BadDeploymentException("No " + AmbariConstants.ROLE
+                                       + " instance in cluster " + cluster.toString()
+                                       + " from " + clusterSpec);
     }
     if (instances.size() > 1) {
-      throw new BadDeploymentException("More than one " + AmbariConstants.ROLE + " instance in cluster");
+      throw new BadDeploymentException("More than one " + AmbariConstants.ROLE 
+                                       + " instance in cluster"  + cluster.toString());
     }
 
     Cluster.Instance instance = instances.iterator().next();

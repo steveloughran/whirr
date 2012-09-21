@@ -32,11 +32,12 @@
   <name>Apache Whirr HDP</name>
   <properties>
     <osgi.import>
+      !org.apache.whirr.service.hdp*,
       !functions*,
       *
     </osgi.import>
     <osgi.export>
-      functions*;version="${project.version}"
+      org.apache.whirr.service.hdp*;version="${project.version}"
     </osgi.export>
     <osgi.bundle.activator>org.apache.whirr.service.hdp.osgi.Activator</osgi.bundle.activator>
   </properties>

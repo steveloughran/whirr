@@ -33,12 +33,14 @@ function ambari_configure() {
   
 }
 
+# turn IP tables off. As this point we rely on the infrastructure's network rules to 
+# keep the box secure
 function stop_iptables() {
   echo "Stopping iptables"
   service iptables stop
 }
 
-#Start the hadoop daemon -failure to do so triggers a script failure
+#Start the daemon -failure to do so triggers a script failure
 function start_ambari_daemon() {
   local daemon
   local retval
