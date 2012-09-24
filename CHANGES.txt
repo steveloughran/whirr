@@ -1,12 +1,18 @@
 Apache Whirr Change Log
 
-Trunk (unreleased changes)
+Release 0.8.1 (unreleased changes)
 
   NEW FEATURES
 
   IMPROVEMENTS
 
     WHIRR-638. Parameterize OAB Java install. (Graham Gear via abayer)
+
+    WHIRR-548. Whirr can now reuse existing compute services. 
+    Misc osgi/karaf integration improvements. (Ioannis Canellos)
+
+    WHIRR-649. Make install_cdh_hadoop.sh idempotent, fast failing if already
+    run. (Graham Gear via tomwhite)
   
   BUG FIXES
 
@@ -15,6 +21,18 @@ Trunk (unreleased changes)
 
     WHIRR-645. Race condition between collocated namenode and
     jobtracker services. (Graham Gear via abayer)
+
+    WHIRR-654. Tell RAT to avoid checking atlassian-idex.xml
+    (Steve Loughran via asavu)
+
+    WHIRR-648. CDH repo install removes other repos with same prefix.
+    (Graham Gear via tomwhite)
+
+    WHIRR-646. Integration tests should have failsafe timeouts.
+    (abayer via tomwhite)
+
+    WHIRR-642. Whirr writes the AWS Secret key to the stdout.
+    (Steve Loughran via tomwhite)
 
 Release 0.8.0 - 2012-08-17
 
