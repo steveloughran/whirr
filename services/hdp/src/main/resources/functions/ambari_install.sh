@@ -61,6 +61,10 @@ function ambari_install() {
   local OPTIND
   local OPTARG
   local retval
+  if [ "$INSTALL_AMBARI_DONE" == "1" ]; then
+    echo "ambari is already installed."
+    return;
+  fi
 
   HDP_VERSION=1.1.0.15
   REPO=${REPO:-hdp1}
@@ -69,22 +73,17 @@ function ambari_install() {
   
   #OS version to use. Also: centos5; suse11
   OS_VERSION=centos6
-  HADOOP=hadoop-${HADOOP_VERSION}
-  HADOOP_HOME=/usr/lib/hadoop
-  #HADOOP_CONF_DIR=$HADOOP_HOME/conf
-  HADOOP_CONF_DIR=/etc/hadoop/conf.whirr
+  PACKAGES="epel-release pdsh hmc curl"
 
-  HADOOP_PACKAGE="epel-release pdsh hmc curl"
-
-  echo "about to install $HADOOP_PACKAGE from HDP release $HDP_VERSION"
+  echo "about to install $PACKAGES from HDP release $HDP_VERSION"
 
   register_hortonworks_repo
 
-  echo "about to install $HADOOP_PACKAGE"
-  retry_yum install -y $HADOOP_PACKAGE
-  if ! retry_yum install -y $HADOOP_PACKAGE;
+  echo "about to install $PACKAGES"
+  retry_yum install -y $PACKAGES
+  if ! retry_yum install -y $PACKAGES;
   then
-    echo "Failed to Install $HADOOP_PACKAGE from yum"
+    echo "Failed to Install $PACKAGES from yum"
     exit 1;
   fi
   INSTALL_AMBARI_DONE=1
