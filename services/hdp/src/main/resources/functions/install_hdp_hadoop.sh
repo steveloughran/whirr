@@ -64,6 +64,10 @@ function install_hdp_hadoop() {
   local OPTIND
   local OPTARG
   local retval
+  if [ "$INSTALL_HADOOP_DONE" == "1" ]; then
+    echo "Hadoop is already installed."
+    return;
+  fi
 
   HDP_VERSION=1.1.0.15
   REPO=${REPO:-hdp1}
