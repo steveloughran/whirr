@@ -27,22 +27,32 @@ set -x
 
 function register_hortonworks_repo() {
 
-  rm -f /etc/yum.repos.d/hdp*.repo
+  rm -f /etc/yum.repos.d/hdp-whirr-*.repo
   local REPOFILE=/etc/yum.repos.d/hdp-whirr-${REPO}-${HDP_VERSION}.repo
   local baseurl="http://${REPO_HOST}/HDP-${HDP_VERSION}/repos/${OS_VERSION}"
+  local utilsurl="http://${REPO_HOST}/HDP-UTILS-${HDP_VERSION}/repos/${OS_VERSION}"
+  local keyurl= "${baseurl}/RPM-GPG-KEY-Jenkins"
+  
   cat > $REPOFILE << EOF
-[hdp-${REPO}]
+[HDP-${REPO}]
 name=Hortonworks Data Platform Version - HDP-${HDP_VERSION}
 baseurl=${baseurl}
 gpgcheck=0
 enabled=1
 priority=1
 gpgcheck=1
-gpgkey=http://${baseurl}/RPM-GPG-KEY-Jenkins
+gpgkey=${keyurl}
 
+[HDP-UTILS-${REPO}]
+name=Hortonworks Data Platform Utils Version - HDP-UTILS-${REPO}
+baseurl=${utilsurl}
+gpgcheck=1
+gpgkey=${keyurl}
+enabled=1
+priority=1
 EOF
 
-  echo "installed new repo file ${REPOFILE} with repository ${baseurl}"
+  echo "installed new repo file ${REPOFILE} with repository ${baseurl} and ${utilsurl}"
   echo "About to update yum"
   retry_yum update -y 
 }
@@ -64,7 +74,7 @@ function ambari_install() {
   #HADOOP_CONF_DIR=$HADOOP_HOME/conf
   HADOOP_CONF_DIR=/etc/hadoop/conf.whirr
 
-  HADOOP_PACKAGE="epel-release hmc curl"
+  HADOOP_PACKAGE="epel-release pdsh hmc curl"
 
   echo "about to install $HADOOP_PACKAGE from HDP release $HDP_VERSION"
 

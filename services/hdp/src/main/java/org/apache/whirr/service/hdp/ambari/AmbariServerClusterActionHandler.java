@@ -64,6 +64,13 @@ public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActio
 
     Cluster.Instance instance = instances.iterator().next();
 
+    //verify that the instance isn't also set up to be a worker, as ambari doesn't manage itself.
+    if (instance.getRoles().contains(AmbariConstants.AMBARI_WORKER)) {
+      throw new BadDeploymentException("The " + AmbariConstants.AMBARI_SERVER 
+                                       + " instance can not also run an " +
+                                       AmbariConstants.AMBARI_WORKER);
+    }
+    
     event.getFirewallManager().addRules(
       FirewallManager.Rule.create().destination(instance).ports(AmbariConstants.AMBARI_SERVER_WEB_UI_PORT));
 
@@ -97,7 +104,23 @@ public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActio
     Properties config = new Properties();
     createProxyScript(clusterSpec, cluster);
     event.setCluster(new Cluster(cluster.getInstances(), config));
+
+    String workerList = createWorkerDescriptionFile(cluster);
+    LOG.info("Worker list:\n{}",workerList);
   }
 
+  
+  protected String createWorkerDescriptionFile(Cluster cluster) throws IOException {
+
+    Set<Cluster.Instance> workers = getAmbariWorkers(cluster);
+
+
+    StringBuilder builder = new StringBuilder(workers.size() * 64);
+    for (Cluster.Instance worker:workers) {
+      builder.append(worker.getPrivateAddress()).append("\n");
+    }
+    return builder.toString();
+  } 
+    
 
 }

@@ -25,6 +25,7 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.whirr.Cluster;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.RolePredicates;
+import org.apache.whirr.service.ClusterActionEvent;
 import org.apache.whirr.service.ClusterActionHandlerSupport;
 import org.apache.whirr.service.hdp.ClusterProxy;
 import org.slf4j.Logger;
@@ -33,12 +34,14 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Set;
 
 public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHandlerSupport {
 
 
   private static final Logger LOG =
     LoggerFactory.getLogger(AbstractAmbariClusterActionHandler.class);
+  
 
   public static InetAddress getAmbariServerPublicAddress(Cluster cluster)
     throws IOException {
@@ -46,6 +49,14 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
       RolePredicates.role(AmbariConstants.AMBARI_SERVER))
                   .getPublicAddress();
   }
+  
+  public static Set<Cluster.Instance> getAmbariWorkers(Cluster cluster)
+    throws IOException {
+    return cluster.getInstancesMatching(
+      RolePredicates.role(AmbariConstants.AMBARI_WORKER));
+  }
+  
+  
 
   /**
    * Returns a composite configuration that is made up from the global
@@ -79,5 +90,17 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
     } catch (IOException e) {
       LOG.error("Problem writing proxy script {}", proxyFile, e);
     }
+  }
+
+  @Override
+  public void beforeAction(ClusterActionEvent event) throws IOException, InterruptedException {
+    LOG.info("["+getRole()+"]" + " before: " +event.getAction());
+    super.beforeAction(event);
+  }
+
+  @Override
+  public void afterAction(ClusterActionEvent event) throws IOException, InterruptedException {
+    LOG.info(getRole() + " after: " + event.getAction());
+    super.afterAction(event);
   }
 }

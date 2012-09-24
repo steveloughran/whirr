@@ -32,4 +32,6 @@ public class AmbariWorkerClusterActionHandler extends AbstractAmbariClusterActio
   public String getRole() {
     return AmbariConstants.AMBARI_WORKER;
   }
+  
+  
 }
