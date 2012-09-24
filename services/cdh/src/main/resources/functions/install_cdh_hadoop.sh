@@ -34,7 +34,6 @@ EOF
     fi
     retry_apt_get -y update
   elif which rpm &> /dev/null; then
-    rm -f /etc/yum.repos.d/cloudera*.repo
     if [ $CDH_MAJOR_VERSION = "4" ]; then
       cat > /etc/yum.repos.d/cloudera-cdh4.repo <<EOF
 [cloudera-cdh4]
@@ -60,6 +59,11 @@ EOF
 function install_cdh_hadoop() {
   local OPTIND
   local OPTARG
+
+  if [ "$INSTALL_HADOOP_DONE" == "1" ]; then
+    echo "Hadoop is already installed."
+    return;
+  fi
 
   REPO=${REPO:-cdh4}
   REPO_HOST=${REPO_HOST:-archive.cloudera.com}
