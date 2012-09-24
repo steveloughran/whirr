@@ -20,22 +20,32 @@ package org.apache.whirr.service.hdp.ambari;
 
 public class AmbariConstants {
 
-  public static final String ROLE = "ambari-server";
+  
+/**
+ * name of server roles in configuration files: {@value}
+ */
+  public static final String AMBARI_SERVER = "ambari-server";
+
+
+  /**
+   * name of worker role in configuration files: {@value}
+   */
+  public static final String AMBARI_WORKER = "ambari-worker";
   public static final int AMBARI_SERVER_WEB_UI_PORT = 80;
 
   public static final String AMBARI_DEFAULT_PROPERTIES = "whirr-ambari-default.properties";
 
   public static final String KEY_INSTALL_FUNCTION = "whirr.ambari.install-function";
   public static final String KEY_CONFIGURE_FUNCTION = "whirr.ambari.configure-function";
-  
-  
+
+
   public static final String KEY_TARBALL_URL = "whirr.ambari.tarball.url";
   public static final String KEY_START_FUNCTION = "whirr.ambari.start-function";
 
   public static final String FUNCTION_INSTALL = "install_ambari";
   public static final String FUNCTION_POST_CONFIGURE = "configure_ambari";
   public static final String FUNCTION_START = "start_ambari";
-  
-  public static final String PROXY_SHELL= "ambari-proxy.sh";
+
+  public static final String PROXY_SHELL = "ambari-proxy.sh";
 
 }

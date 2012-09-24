@@ -16,14 +16,20 @@
  *  limitations under the License.
  */
 
-package org.apache.whirr.service.hdp.hadoop;
+package org.apache.whirr.service.hdp.ambari;
 
-public class HdpConstants {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-  public static final String HDP_INSTALL_FUNCTION = "install_hdp_hadoop";
-  public static final String HDP_CONFIGURE_FUNCTION = "configure_hdp_hadoop";
+public class AmbariWorkerClusterActionHandler extends AbstractAmbariClusterActionHandler {
 
-  public static final String WHIRR_HADOOP_INSTALL_FN_KEY = "whirr.hadoop.install-function";
-  public static final String WHIRR_HADOOP_CONFIGURE_FN_KEY = "whirr.hadoop.configure-function";
 
+  private static final Logger LOG =
+    LoggerFactory.getLogger(AmbariWorkerClusterActionHandler.class);
+
+
+  @Override
+  public String getRole() {
+    return AmbariConstants.AMBARI_WORKER;
+  }
 }
