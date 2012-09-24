@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.whirr.service.hdp.integration;
+package org.apache.whirr.service.hdp.hadoop.integration;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
