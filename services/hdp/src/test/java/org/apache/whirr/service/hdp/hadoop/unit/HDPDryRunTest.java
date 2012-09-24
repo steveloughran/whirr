@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.whirr.service.hdp.unit;
+package org.apache.whirr.service.hdp.hadoop.unit;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
