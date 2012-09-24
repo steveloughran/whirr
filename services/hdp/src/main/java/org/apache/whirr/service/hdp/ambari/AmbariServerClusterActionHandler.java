@@ -98,9 +98,9 @@ public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActio
    * from the Whirr client.
    * 
    * These need conversion into a set of hostnames, that can only be done in-cluster
-   * @param cluster
-   * @return
-   * @throws IOException
+   * @param cluster cluster to work with
+   * @return a string of worker nodes, 1 per line, that is only valid inside the cluster.
+   * @throws IOException if getting the workers fails.
    */
 
   protected String createWorkerDescriptionFile(Cluster cluster) throws IOException {

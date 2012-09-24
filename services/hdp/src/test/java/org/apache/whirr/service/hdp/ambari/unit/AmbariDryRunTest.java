@@ -27,9 +27,6 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.BaseServiceDryRunTest;
 import org.apache.whirr.service.DryRunModule;
-import static org.apache.whirr.service.hdp.ambari.AmbariConstants.*;
-import static junit.framework.Assert.*;
-
 import org.apache.whirr.service.hdp.BadDeploymentException;
 import org.junit.Test;
 
@@ -37,6 +34,12 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.fail;
+import static org.apache.whirr.service.hdp.ambari.AmbariConstants.AMBARI_SERVER;
+import static org.apache.whirr.service.hdp.ambari.AmbariConstants.AMBARI_WORKER;
 
 public class AmbariDryRunTest extends BaseServiceDryRunTest {
 
@@ -76,15 +79,27 @@ public class AmbariDryRunTest extends BaseServiceDryRunTest {
     return props;
   }
 
-  private DryRunModule.DryRun launchCluster(String template) throws ConfigurationException, JSchException, IOException, InterruptedException {
+  private DryRunModule.DryRun launchCluster(String template) throws
+                                                             ConfigurationException,
+                                                             JSchException,
+                                                             IOException,
+                                                             InterruptedException {
     ClusterSpec cookbookWithDefaultRecipe = newClusterSpecForProperties(ImmutableMap.of(
       "whirr.instance-templates", template));
     return launchWithClusterSpec(cookbookWithDefaultRecipe);
   }
 
-  /**
-   * Tests that a simple cluster is correctly loaded and executed.
-   */
+  private void assertWrapsBadDeploymentException(RuntimeException e) {
+    Throwable cause = e.getCause();
+    assertNotNull(cause);
+    assertEquals(BadDeploymentException.class, cause.getClass());
+  }
+
+  @Test
+  public void testServerAndMultiWorkerCluster() throws Exception {
+    DryRunModule.DryRun dryRun = launchCluster("1 " + AMBARI_SERVER + ",128 " + AMBARI_WORKER);
+  }
+
   @Test
   public void testServerWorkerSameVMForbidden() throws Exception {
     try {
@@ -95,19 +110,11 @@ public class AmbariDryRunTest extends BaseServiceDryRunTest {
     }
   }
 
-  private void assertWrapsBadDeploymentException(RuntimeException e) {
-    Throwable cause = e.getCause();
-    assertNotNull(cause);
-    assertEquals(BadDeploymentException.class,cause.getClass());
-  }
 
-  /**
-   * Tests that a simple cluster is correctly loaded and executed.
-   */
   @Test
   public void testClusterMustHaveAmbariServer() throws Exception {
     try {
-      DryRunModule.DryRun dryRun = launchCluster("1 "+ AMBARI_WORKER);
+      DryRunModule.DryRun dryRun = launchCluster("1 " + AMBARI_WORKER);
       fail("Expected an error, got a cluster ");
     } catch (RuntimeException e) {
       assertWrapsBadDeploymentException(e);
