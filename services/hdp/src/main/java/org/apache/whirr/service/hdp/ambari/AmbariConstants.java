@@ -20,10 +20,10 @@ package org.apache.whirr.service.hdp.ambari;
 
 public class AmbariConstants {
 
-  
-/**
- * name of server roles in configuration files: {@value}
- */
+
+  /**
+   * name of server roles in configuration files: {@value}
+   */
   public static final String AMBARI_SERVER = "ambari-server";
 
 

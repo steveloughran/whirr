@@ -18,8 +18,12 @@
 
 package org.apache.whirr.service.hdp.ambari;
 
+import org.apache.whirr.Cluster;
+import org.apache.whirr.service.ClusterActionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 public class AmbariWorkerClusterActionHandler extends AbstractAmbariClusterActionHandler {
 
@@ -32,6 +36,10 @@ public class AmbariWorkerClusterActionHandler extends AbstractAmbariClusterActio
   public String getRole() {
     return AmbariConstants.AMBARI_WORKER;
   }
-  
-  
+
+
+  @Override
+  protected void beforeConfigure(ClusterActionEvent event) throws IOException, InterruptedException {
+    Cluster.Instance serverInstance = extractAmbariServer(event);
+  }
 }

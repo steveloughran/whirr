@@ -16,10 +16,13 @@
  *  limitations under the License.
  */
 
-package org.apache.whirr.service.hdp.ambari;
+package org.apache.whirr.service.hdp;
 
 import java.io.IOException;
 
+/**
+ * Exception raised whenever the deployment isn't working -often by invalid cluster configs
+ */
 public class BadDeploymentException extends IOException {
   public BadDeploymentException(String message) {
     super(message);

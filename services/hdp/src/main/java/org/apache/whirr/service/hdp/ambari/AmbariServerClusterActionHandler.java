@@ -22,6 +22,7 @@ import org.apache.whirr.Cluster;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.ClusterActionEvent;
 import org.apache.whirr.service.FirewallManager;
+import org.apache.whirr.service.hdp.BadDeploymentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,32 +48,14 @@ public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActio
   @Override
   protected void beforeConfigure(ClusterActionEvent event) throws IOException,
                                                                   InterruptedException {
-    ClusterSpec clusterSpec = event.getClusterSpec();
-    Cluster cluster = event.getCluster();
+
+    Cluster.Instance serverInstance = extractAmbariServer(event);
 
     LOG.info("Authorizing firewall");
-    Set<Cluster.Instance> instances = cluster.getInstancesMatching(role(AmbariConstants.AMBARI_SERVER));
-    if (instances.isEmpty()) {
-      throw new BadDeploymentException("No " + AmbariConstants.AMBARI_SERVER
-                                       + " instance in cluster " + cluster.toString()
-                                       + " from " + clusterSpec);
-    }
-    if (instances.size() > 1) {
-      throw new BadDeploymentException("More than one " + AmbariConstants.AMBARI_SERVER
-                                       + " instance in cluster" + cluster.toString());
-    }
+    ClusterSpec clusterSpec = event.getClusterSpec();
 
-    Cluster.Instance instance = instances.iterator().next();
-
-    //verify that the instance isn't also set up to be a worker, as ambari doesn't manage itself.
-    if (instance.getRoles().contains(AmbariConstants.AMBARI_WORKER)) {
-      throw new BadDeploymentException("The " + AmbariConstants.AMBARI_SERVER 
-                                       + " instance can not also run an " +
-                                       AmbariConstants.AMBARI_WORKER);
-    }
-    
     event.getFirewallManager().addRules(
-      FirewallManager.Rule.create().destination(instance).ports(AmbariConstants.AMBARI_SERVER_WEB_UI_PORT));
+      FirewallManager.Rule.create().destination(serverInstance).ports(AmbariConstants.AMBARI_SERVER_WEB_UI_PORT));
 
     String installFunction = getConfiguration(clusterSpec).getString(
       AmbariConstants.KEY_INSTALL_FUNCTION,
@@ -106,21 +89,31 @@ public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActio
     event.setCluster(new Cluster(cluster.getInstances(), config));
 
     String workerList = createWorkerDescriptionFile(cluster);
-    LOG.info("Worker list:\n{}",workerList);
+    LOG.info("Worker list:\n{}", workerList);
   }
 
-  
+  /**
+   * This creates all the cluster-local IP Addresses for the cluster, but in a NATted infrastructure
+   * these are all IP addresses that don't resolve outside the cluster; that don't support rDNS
+   * from the Whirr client.
+   * 
+   * These need conversion into a set of hostnames, that can only be done in-cluster
+   * @param cluster
+   * @return
+   * @throws IOException
+   */
+
   protected String createWorkerDescriptionFile(Cluster cluster) throws IOException {
 
     Set<Cluster.Instance> workers = getAmbariWorkers(cluster);
 
 
     StringBuilder builder = new StringBuilder(workers.size() * 64);
-    for (Cluster.Instance worker:workers) {
-      builder.append(worker.getPrivateAddress()).append("\n");
+    for (Cluster.Instance worker : workers) {
+      builder.append(worker.getPrivateAddress().getCanonicalHostName()).append("\n");
     }
     return builder.toString();
-  } 
-    
+  }
+
 
 }
