@@ -65,7 +65,7 @@ import static junit.framework.Assert.failNotEquals;
 public class HdpHadoopServiceTest {
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(HdpHadoopServiceTest.class);
+    .getLogger(HdpHadoopServiceTest.class);
 
   private final static Predicate<NodeMetadata> ALL = Predicates.alwaysTrue();
 
@@ -77,7 +77,7 @@ public class HdpHadoopServiceTest {
   protected static String getPropertiesFilename() {
     return "whirr-hadoop-hdp-test.properties";
   }
-  
+
   @BeforeClass
   public static void setUp() throws Exception {
     CompositeConfiguration config = new CompositeConfiguration();
@@ -87,7 +87,7 @@ public class HdpHadoopServiceTest {
     config.addConfiguration(new PropertiesConfiguration(getPropertiesFilename()));
     clusterSpec = ClusterSpec.withTemporaryKeys(config);
     controller = new ClusterController();
-    
+
     cluster = controller.launchCluster(clusterSpec);
     proxy = new HadoopProxy(clusterSpec, cluster);
     proxy.start();
@@ -109,7 +109,7 @@ public class HdpHadoopServiceTest {
   public void testVersion() throws Exception {
     Statement checkVersion = Statements.exec("yum list installed | grep hadoop");
     Map<? extends NodeMetadata, ExecResponse> responses =
-       controller.runScriptOnNodesMatching(clusterSpec, ALL, checkVersion);
+      controller.runScriptOnNodesMatching(clusterSpec, ALL, checkVersion);
 
     printResponses(checkVersion, responses);
     assertResponsesContain(responses, checkVersion, "hdp");
@@ -120,29 +120,29 @@ public class HdpHadoopServiceTest {
   @Test
   public void testJobExecution() throws Exception {
     Configuration conf = getConfiguration();
-    
+
     JobConf job = new JobConf(conf, HdpHadoopServiceTest.class);
     JobClient client = new JobClient(job);
     waitForTaskTrackers(client);
 
     checkHadoop(conf, client, job);
   }
-  
+
   protected void checkHadoop(Configuration conf, JobClient client, JobConf job) throws Exception {
     FileSystem fs = FileSystem.get(conf);
-    
+
     OutputStream os = fs.create(new Path("input"));
     Writer wr = new OutputStreamWriter(os);
     wr.write("b a\n");
     wr.close();
-    
+
     job.setMapperClass(TokenCountMapper.class);
     job.setReducerClass(LongSumReducer.class);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(LongWritable.class);
     FileInputFormat.setInputPaths(job, new Path("input"));
     FileOutputFormat.setOutputPath(job, new Path("output"));
-    
+
     JobClient.runJob(job);
 
     FSDataInputStream in = fs.open(new Path("output/part-00000"));
@@ -152,7 +152,7 @@ public class HdpHadoopServiceTest {
     assertNull(reader.readLine());
     reader.close();
   }
-  
+
   private Configuration getConfiguration() {
     Configuration conf = new Configuration();
     for (Entry<Object, Object> entry : cluster.getConfiguration().entrySet()) {
@@ -160,7 +160,7 @@ public class HdpHadoopServiceTest {
     }
     return conf;
   }
-  
+
   private static void waitForTaskTrackers(JobClient client) throws IOException {
     while (true) {
       ClusterStatus clusterStatus = client.getClusterStatus();
@@ -178,23 +178,23 @@ public class HdpHadoopServiceTest {
   }
 
   private static void assertResponsesContain(
-      Map<? extends NodeMetadata, ExecResponse> responses, Statement statement,
-      String text) {
+    Map<? extends NodeMetadata, ExecResponse> responses, Statement statement,
+    String text) {
     for (Entry<? extends NodeMetadata, ExecResponse> entry : responses
-        .entrySet()) {
+      .entrySet()) {
       if (!entry.getValue().getOutput().contains(text)) {
         failNotEquals("Node: " + entry.getKey().getId()
-            + " failed to execute the command: " + statement
-            + " as could not find expected text", text, entry.getValue());
+                      + " failed to execute the command: " + statement
+                      + " as could not find expected text", text, entry.getValue());
       }
     }
   }
 
   public static void printResponses(Statement statement,
-      Map<? extends NodeMetadata, ExecResponse> responses) {
+                                    Map<? extends NodeMetadata, ExecResponse> responses) {
     LOG.info("Responses for Statement: " + statement);
     for (Entry<? extends NodeMetadata, ExecResponse> entry : responses
-        .entrySet()) {
+      .entrySet()) {
       LOG.info("Node[" + entry.getKey().getId() + "]: " + entry.getValue());
     }
   }
