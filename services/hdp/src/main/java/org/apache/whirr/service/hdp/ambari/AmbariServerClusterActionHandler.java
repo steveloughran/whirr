@@ -22,7 +22,6 @@ import org.apache.whirr.Cluster;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.ClusterActionEvent;
 import org.apache.whirr.service.FirewallManager;
-import org.apache.whirr.service.hdp.BadDeploymentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +33,7 @@ import java.util.Set;
 import static org.apache.whirr.RolePredicates.role;
 import static org.jclouds.scriptbuilder.domain.Statements.call;
 
-public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActionHandler {
+public final class AmbariServerClusterActionHandler extends AbstractAmbariClusterActionHandler {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(AmbariServerClusterActionHandler.class);
@@ -43,6 +42,24 @@ public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActio
   @Override
   public String getRole() {
     return AmbariConstants.AMBARI_SERVER;
+  }
+
+
+  @Override
+  protected void beforeBootstrap(ClusterActionEvent event) throws IOException {
+    ClusterSpec clusterSpec = event.getClusterSpec();
+
+    String installFunction = getConfiguration(clusterSpec).getString(
+      AmbariConstants.KEY_INSTALL_FUNCTION,
+      AmbariConstants.FUNCTION_INSTALL);
+    String configureFunction = getConfiguration(clusterSpec).getString(
+      AmbariConstants.KEY_CONFIGURE_FUNCTION,
+      AmbariConstants.FUNCTION_POST_CONFIGURE);
+
+    addStatement(event, call("retry_helpers"));
+
+    addStatement(event, call(installFunction, AmbariConstants.AMBARI_SERVER));
+    addStatement(event, call(configureFunction, AmbariConstants.AMBARI_SERVER));
   }
 
   @Override
@@ -57,17 +74,6 @@ public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActio
     event.getFirewallManager().addRules(
       FirewallManager.Rule.create().destination(serverInstance).ports(AmbariConstants.AMBARI_SERVER_WEB_UI_PORT));
 
-    String installFunction = getConfiguration(clusterSpec).getString(
-      AmbariConstants.KEY_INSTALL_FUNCTION,
-      AmbariConstants.FUNCTION_INSTALL);
-    String configureFunction = getConfiguration(clusterSpec).getString(
-      AmbariConstants.KEY_CONFIGURE_FUNCTION,
-      AmbariConstants.FUNCTION_POST_CONFIGURE);
-
-    addStatement(event, call("retry_helpers"));
-
-    addStatement(event, call(installFunction, AmbariConstants.AMBARI_SERVER));
-    addStatement(event, call(configureFunction, AmbariConstants.AMBARI_SERVER));
 
   }
 
@@ -96,7 +102,7 @@ public class AmbariServerClusterActionHandler extends AbstractAmbariClusterActio
    * This creates all the cluster-local IP Addresses for the cluster, but in a NATted infrastructure
    * these are all IP addresses that don't resolve outside the cluster; that don't support rDNS
    * from the Whirr client.
-   * 
+   *
    * These need conversion into a set of hostnames, that can only be done in-cluster
    * @param cluster cluster to work with
    * @return a string of worker nodes, 1 per line, that is only valid inside the cluster.

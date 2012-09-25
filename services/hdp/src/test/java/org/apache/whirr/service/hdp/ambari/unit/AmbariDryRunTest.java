@@ -29,19 +29,21 @@ import org.apache.whirr.service.BaseServiceDryRunTest;
 import org.apache.whirr.service.DryRunModule;
 import org.apache.whirr.service.hdp.BadDeploymentException;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.fail;
 import static org.apache.whirr.service.hdp.ambari.AmbariConstants.AMBARI_SERVER;
 import static org.apache.whirr.service.hdp.ambari.AmbariConstants.AMBARI_WORKER;
 
 public class AmbariDryRunTest extends BaseServiceDryRunTest {
+  private static final Logger LOG =
+    LoggerFactory.getLogger(AmbariDryRunTest.class);
 
   @Override
   protected Set<String> getInstanceRoles() {
@@ -91,8 +93,13 @@ public class AmbariDryRunTest extends BaseServiceDryRunTest {
 
   private void assertWrapsBadDeploymentException(RuntimeException e) {
     Throwable cause = e.getCause();
-    assertNotNull(cause);
-    assertEquals(BadDeploymentException.class, cause.getClass());
+    if (cause == null) {
+      throw e;
+    }
+    if (!(BadDeploymentException.class.equals(cause.getClass()))) {
+      throw e;
+    }
+    LOG.info("Expected Deployment Exception ", cause);
   }
 
   @Test

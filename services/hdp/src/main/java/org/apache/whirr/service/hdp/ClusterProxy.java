@@ -32,6 +32,9 @@ import java.net.InetAddress;
 
 import static com.google.common.base.Preconditions.checkState;
 
+/**
+ * Code to create a proxy command to run against a specific server.
+ */
 public class ClusterProxy {
 
   private ClusterSpec clusterSpec;

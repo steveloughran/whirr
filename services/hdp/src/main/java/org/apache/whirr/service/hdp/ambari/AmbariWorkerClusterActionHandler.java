@@ -24,8 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Set;
 
-public class AmbariWorkerClusterActionHandler extends AbstractAmbariClusterActionHandler {
+public final class AmbariWorkerClusterActionHandler extends AbstractAmbariClusterActionHandler {
 
 
   private static final Logger LOG =
@@ -40,6 +41,13 @@ public class AmbariWorkerClusterActionHandler extends AbstractAmbariClusterActio
 
   @Override
   protected void beforeConfigure(ClusterActionEvent event) throws IOException, InterruptedException {
-    Cluster.Instance serverInstance = extractAmbariServer(event);
+    //Cluster.Instance serverInstance = extractAmbariServer(event);
+
+  }
+
+  @Override
+  protected void afterStart(ClusterActionEvent event) throws IOException, InterruptedException {
+    Set<Cluster.Instance> instances = getAmbariWorkers(event.getCluster());
+    LOG.info("Started {} ambari workers", instances.size());
   }
 }

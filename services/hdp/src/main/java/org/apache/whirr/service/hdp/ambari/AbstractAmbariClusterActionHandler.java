@@ -106,22 +106,15 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
     super.afterAction(event);
   }
 
+  /**
+   * Extract the single ambari server in a cluster. This verifies that there is exactly one such
+   * server, and that it is not also a worker
+   * @param event the event containing the cluster & its spec
+   * @return the single instance 
+   * @throws BadDeploymentException on any problem
+   */
   protected Cluster.Instance extractAmbariServer(ClusterActionEvent event) throws BadDeploymentException {
-    Cluster cluster = event.getCluster();
-
-    ClusterSpec clusterSpec = event.getClusterSpec();
-    Set<Cluster.Instance> instances = cluster.getInstancesMatching(role(AmbariConstants.AMBARI_SERVER));
-    if (instances.isEmpty()) {
-      throw new BadDeploymentException("No " + AmbariConstants.AMBARI_SERVER
-                                       + " instance in cluster " + cluster.toString()
-                                       + " from " + clusterSpec);
-    }
-    if (instances.size() > 1) {
-      throw new BadDeploymentException("More than one " + AmbariConstants.AMBARI_SERVER
-                                       + " instance in cluster" + cluster.toString());
-    }
-
-    Cluster.Instance instance = instances.iterator().next();
+    Cluster.Instance instance = locateSingleServerInstance(event, AmbariConstants.AMBARI_SERVER);
 
     //verify that the instance isn't also set up to be a worker, as ambari doesn't manage itself.
     if (instance.getRoles().contains(AmbariConstants.AMBARI_WORKER)) {
@@ -130,5 +123,34 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
                                        AmbariConstants.AMBARI_WORKER);
     }
     return instance;
+  }
+
+  /**
+   * Extract the single ambari server in a cluster. This verifies that there is exactly one such
+   * server, and that it is not also a worker
+   * @param event the event containing the cluster & its spec
+   * @param role role to look for
+   * @return the single instance 
+   * @throws BadDeploymentException on any problem
+   */
+
+  public static Cluster.Instance locateSingleServerInstance(ClusterActionEvent event, String role) throws BadDeploymentException {
+    Cluster cluster = event.getCluster();
+    if (cluster.getInstances() == null) {
+      throw new BadDeploymentException("Server location cannot be performed until the cluster is instantiated");
+    }
+    ClusterSpec clusterSpec = event.getClusterSpec();
+    Set<Cluster.Instance> instances = cluster.getInstancesMatching(role(role));
+    if (instances.isEmpty()) {
+      throw new BadDeploymentException("No " + role
+                                       + " instance in cluster " + cluster.toString()
+                                       + " from " + clusterSpec);
+    }
+    if (instances.size() > 1) {
+      throw new BadDeploymentException("More than one " + role
+                                       + " instance in cluster" + cluster.toString());
+    }
+
+    return instances.iterator().next();
   }
 }

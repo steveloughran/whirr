@@ -57,6 +57,31 @@ EOF
   retry_yum update -y 
 }
 
+function register_hortonworks_repo2() {
+
+  rm -f /etc/yum.repos.d/hdp-whirr-*.repo
+  local REPOFILE=/etc/yum.repos.d/hdp-whirr-${REPO}-${HDP_VERSION}.repo
+  local baseurl="http://${REPO_HOST}/HDP-${HDP_VERSION}/repos/${OS_VERSION}"
+  local utilsurl="http://${REPO_HOST}/HDP-UTILS-${HDP_VERSION}/repos/${OS_VERSION}"
+  local keyurl= "${baseurl}/RPM-GPG-KEY-Jenkins"
+  
+  cat > $REPOFILE << EOF
+[HDP-${REPO}]
+name=Hortonworks Data Platform Version - HDP-${HDP_VERSION}
+baseurl=${baseurl}
+gpgcheck=0
+enabled=1
+priority=1
+gpgcheck=1
+gpgkey=${keyurl}
+
+EOF
+
+  echo "installed new repo file ${REPOFILE} with repository ${baseurl} and ${utilsurl}"
+  echo "About to update yum"
+  retry_yum update -y 
+}
+
 function ambari_install() {
   local OPTIND
   local OPTARG
@@ -77,7 +102,7 @@ function ambari_install() {
 
   echo "about to install $PACKAGES from HDP release $HDP_VERSION"
 
-  register_hortonworks_repo
+  register_hortonworks_repo2
 
   echo "about to install $PACKAGES"
   retry_yum install -y $PACKAGES
