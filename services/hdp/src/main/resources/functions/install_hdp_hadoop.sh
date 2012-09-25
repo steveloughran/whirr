@@ -21,6 +21,7 @@ set -x
 #
 
 # see http://bit.ly/QcFWqv 
+# http://docs.hortonworks.com/CURRENT/index.htm#Deploying_Hortonworks_Data_Platform/Using_gsInstaller/System_Requirements_For_Test_And_Production_Clusters.htm
 # the layout is OS-specific; this script only supports Centos6, unless OS_VERSION is changed,
 #
 #http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos5/hdp.repo
@@ -81,7 +82,7 @@ function install_hdp_hadoop() {
   #HADOOP_CONF_DIR=$HADOOP_HOME/conf
   HADOOP_CONF_DIR=/etc/hadoop/conf.whirr
 
-  HADOOP_PACKAGE="hadoop hadoop-native snappy snappy-devel snappy.i686 snappy-devel.i686"
+  HADOOP_PACKAGE="hadoop hadoop-native hadoop-pipes hadoop-libhdfs  snappy snappy-devel snappy.i686 snappy-devel.i686  openssl hadoop-lzo lzo lzo-devel hadoop-lzo-native "
 
   echo "about to install $HADOOP_PACKAGE from HDP release $HDP_VERSION"
 
@@ -164,6 +165,10 @@ getent passwd hdfs >/dev/null \
   || exit 1
 
 
+# symlink snappy in 
+ln -sf /usr/lib64/libsnappy.so /usr/lib/hadoop/lib/native/Linux-amd64-64/.
+
+#ln -sf /usr/lib/libsnappy.so /usr/lib/hadoop/lib/native/Linux-i386-32/.
 
   echo "Hadoop RPM installation and user configuration complete"
   INSTALL_HADOOP_DONE=1
