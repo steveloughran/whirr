@@ -20,8 +20,9 @@ package org.apache.whirr.service.hdp.hadoop;
 
 public class HdpConstants {
 
-  public static final String HDP_INSTALL_FUNCTION ="install_hdp_hadoop";
-  public static final String HDP_CONFIGURE_FUNCTION ="configure_hdp_hadoop";
+  public static final String HDP_INSTALL_FUNCTION = "install_hdp_hadoop";
+  public static final String HDP_CONFIGURE_FUNCTION = "configure_hdp_hadoop";
+  public static final String HDP_REGISTER_REPO_FUNCTION = "hdp_register_hortonworks_repo";
 
   public static final String WHIRR_HADOOP_INSTALL_FN_KEY = "whirr.hadoop.install-function";
   public static final String WHIRR_HADOOP_CONFIGURE_FN_KEY = "whirr.hadoop.configure-function";
