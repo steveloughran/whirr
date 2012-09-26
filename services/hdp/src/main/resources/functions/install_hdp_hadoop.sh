@@ -30,8 +30,8 @@ set -x
 
 function register_hortonworks_repo() {
 
-  rm -f /etc/yum.repos.d/hdp-whirr-*.repo
-  local REPOFILE=/etc/yum.repos.d/hdp-whirr-${REPO}-${HDP_VERSION}.repo
+  rm -f /etc/yum.repos.d/hdp.repo
+  local REPOFILE=/etc/yum.repos.d/hdp.repo
   local baseurl="http://${REPO_HOST}/HDP-${HDP_VERSION}/repos/${OS_VERSION}"
   local utilsurl="http://${REPO_HOST}/HDP-UTILS-${HDP_VERSION}/repos/${OS_VERSION}"
   local keyurl= "${baseurl}/RPM-GPG-KEY-Jenkins"
