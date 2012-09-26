@@ -28,19 +28,30 @@ set -x
 #http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos6/hdp.repo
 #http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/suse11/hdp.repo
 
-function register_hortonworks_repo() {
+function hdp_register_hortonworks_repo() {
 
-  rm -f /etc/yum.repos.d/hdp.repo
+  if [ "$REGISTER_HORTONWORKS_REPO" == "1" ]
+  then
+    echo "Hortonworks repo is already installed."
+    return;
+  fi
+
+  local HDP_VERSION=1.1.0.15
+  local REPO=${REPO:-HDP-1}
+  local REPO_HOST=${REPO_HOST:-public-repo-1.hortonworks.com}
+  local HADOOP_VERSION=${HADOOP_VERSION:-1.0.3-1}
+  
+  #OS version to use. Also: centos5; suse11
+  OS_VERSION=centos6
   local REPOFILE=/etc/yum.repos.d/hdp.repo
+  rm -f $REPOFILE
   local baseurl="http://${REPO_HOST}/HDP-${HDP_VERSION}/repos/${OS_VERSION}"
   local utilsurl="http://${REPO_HOST}/HDP-UTILS-${HDP_VERSION}/repos/${OS_VERSION}"
-  local keyurl= "${baseurl}/RPM-GPG-KEY-Jenkins"
-  
+  local keyurl="${baseurl}/RPM-GPG-KEY/RPM-GPG-KEY-Jenkins"
   cat > $REPOFILE << EOF
 [HDP-${REPO}]
 name=Hortonworks Data Platform Version - HDP-${HDP_VERSION}
 baseurl=${baseurl}
-gpgcheck=0
 enabled=1
 priority=1
 gpgcheck=1
@@ -49,15 +60,15 @@ gpgkey=${keyurl}
 [HDP-UTILS-${REPO}]
 name=Hortonworks Data Platform Utils Version - HDP-UTILS-${REPO}
 baseurl=${utilsurl}
-gpgcheck=1
-gpgkey=${keyurl}
 enabled=1
 priority=1
+gpgcheck=1
+gpgkey=${keyurl}
 EOF
 
   echo "installed new repo file ${REPOFILE} with repository ${baseurl} and ${utilsurl}"
-  echo "About to update yum"
-  retry_yum update -y 
+  retry_yum update -y
+  REGISTER_HORTONWORKS_REPO=1
 }
 
 
@@ -65,28 +76,22 @@ function install_hdp_hadoop() {
   local OPTIND
   local OPTARG
   local retval
-  if [ "$INSTALL_HADOOP_DONE" == "1" ]; then
+  if [ "$INSTALL_HADOOP_DONE" == "1" ]
+  then
     echo "Hadoop is already installed."
     return;
   fi
-
-  HDP_VERSION=1.1.0.15
-  REPO=${REPO:-hdp1}
-  REPO_HOST=${REPO_HOST:-public-repo-1.hortonworks.com}
-  HADOOP_VERSION=${HADOOP_VERSION:-1.0.3-1}
   
   #OS version to use. Also: centos5; suse11
-  OS_VERSION=centos6
-  HADOOP=hadoop-${HADOOP_VERSION}
   HADOOP_HOME=/usr/lib/hadoop
   #HADOOP_CONF_DIR=$HADOOP_HOME/conf
   HADOOP_CONF_DIR=/etc/hadoop/conf.whirr
 
   HADOOP_PACKAGE="hadoop hadoop-native hadoop-pipes hadoop-libhdfs  snappy snappy-devel snappy.i686 snappy-devel.i686  openssl hadoop-lzo lzo lzo-devel hadoop-lzo-native "
 
-  echo "about to install $HADOOP_PACKAGE from HDP release $HDP_VERSION"
+  echo "about to install $HADOOP_PACKAGE from HDP"
 
-  register_hortonworks_repo
+  hdp_register_hortonworks_repo
   
 #  if which dpkg &> /dev/null; then
 #    retry_apt_get update
@@ -114,39 +119,6 @@ function install_hdp_hadoop() {
   alternatives --install /etc/hadoop/conf hadoop-conf $HADOOP_CONF_DIR 90
 #  fi
   
-  #Add a group. In the absence of an easy way to see if the group is there,
-  #the error code 9, "duplicate group name" is taken as a sign of existence,
-  #so making this operation idempotent
-#  groupadd -r hadoop
-#  retval=$?
-#  if ((${retval} != 0 && ${retval} != 9))
-#  then
-#    echo "adding group hadoop failed with return code ${retval}"
-#    exit 1;
-#  fi
-
-  #  set up user accounts
-#hadoop
-#mapred:x:105:160:Hadoop MapReduce:/usr/lib/hadoop:/bin/bash
-#hdfs:x:106:159:Hadoop HDFS:/usr/lib/hadoop:/bin/bash
-
-
-#This is what the Hadoop RPM does
-#getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 123 -r hadoop
-#
-#/usr/sbin/useradd --comment "Hadoop MapReduce" -u 202 --shell /bin/bash -M -r -g hadoop --home /tmp mapred 2> /dev/null || :
-#/usr/sbin/useradd --comment "Hadoop HDFS" -u 201 --shell /bin/bash -M -r -g hadoop --home /tmp hdfs 2> /dev/null || :
-
-#  if ! id hadoop ; then
-#    if ! useradd -c "Hadoop" --system --user-group --home /usr/lib/hadoop -M hadoop;
-#    then
-#      echo "Failed to add user hadoop"
-#      exit 1;
-#    else 
-#      echo "created user Hadoop"
-#    fi
-#  fi
-
 
 #Create the groups
 getent group hadoop >/dev/null || groupadd -r hadoop
