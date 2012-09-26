@@ -18,11 +18,47 @@
 
 package org.apache.whirr.service.hdp.ambari;
 
+import com.gargoylesoftware.htmlunit.WebClient;
+import org.apache.whirr.Cluster;
+
+import java.io.File;
+
 /**
  * Uses htmlunit to create a session with the targeted Ambari server and walk it through 
  * the configuration GUI.
- * 
+ *
  * This is somewhat contrived because the GUI is all .js-ish, not RESTy. 
  */
 public class AmbariClusterBuilder {
+
+  private final Cluster cluster;
+  private final File privateKeyFile;
+  private final File publicKeyFile;
+  private final WebClient webClient;
+
+  private enum InstallState {
+    None,
+    CreateCluster,
+    AddNodes,
+    AddNodesProgress,
+    SelectServices,
+    AssignMasters,
+    ConfigureCluster,
+    ConfigureServices,
+    ReviewAndDeploy,
+    DeployProgress,
+  }
+
+  private InstallState installState = InstallState.None;
+
+  public AmbariClusterBuilder(Cluster cluster, File privateKeyFile, File publicKeyFile) {
+    this.cluster = cluster;
+    this.privateKeyFile = privateKeyFile;
+    this.publicKeyFile = publicKeyFile;
+    webClient = new WebClient();
+    webClient.setJavaScriptEnabled(true);
+    webClient.setThrowExceptionOnFailingStatusCode(true);
+    webClient.setThrowExceptionOnScriptError(true);
+  }
+
 }
