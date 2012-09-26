@@ -14,29 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-set -x
-
-
-function ambari_install() {
-
-  hdp_register_hortonworks_repo
-
-  echo "about to install epel-release"
-  if ! retry_yum -y install epel-release
+function ambari_start() {
+  if [ "${START_AMBARI_DONE}" == "1" ]
   then
-    echo "Failed to Install epel-release from yum"
-    exit 1;
+    echo "Ambari is already started."
+    return;
   fi
- 
-  retry_yum -y update
-  local PACKAGES="hmc curl"
   
-  echo "about to install $PACKAGES from HDP release $HDP_VERSION"
-  retry_yum -y install $PACKAGES
-  if ! retry_yum  -y install $PACKAGES
+  local ROLES=$1
+  shift
+  
+  echo "Roles=$ROLES"
+  if [ $(echo "$ROLES" | grep "ambari-server" | wc -l) -gt 0 ]
   then
-    echo "Yum failed to install $PACKAGES from from HDP release $HDP_VERSION"
-    exit 1;
+    start_ambari_daemon hmc
   fi
-  INSTALL_AMBARI_DONE=1
+  
+  START_AMBARI_DONE=1
+  
 }
+
+

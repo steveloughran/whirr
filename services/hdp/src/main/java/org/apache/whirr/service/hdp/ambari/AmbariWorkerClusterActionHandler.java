@@ -35,13 +35,13 @@ public final class AmbariWorkerClusterActionHandler extends AbstractAmbariCluste
 
   @Override
   public String getRole() {
-    return AmbariConstants.AMBARI_WORKER;
+    return AMBARI_WORKER;
   }
 
 
   @Override
   protected void beforeConfigure(ClusterActionEvent event) throws IOException, InterruptedException {
-    //Cluster.Instance serverInstance = extractAmbariServer(event);
+    Cluster.Instance serverInstance = extractAmbariServer(event);
 
   }
 

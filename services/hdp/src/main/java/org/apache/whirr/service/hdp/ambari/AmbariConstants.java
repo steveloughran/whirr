@@ -18,34 +18,41 @@
 
 package org.apache.whirr.service.hdp.ambari;
 
-public class AmbariConstants {
+public interface AmbariConstants {
 
 
   /**
    * name of server roles in configuration files: {@value}
    */
-  public static final String AMBARI_SERVER = "ambari-server";
+  String AMBARI_SERVER = "ambari-server";
 
 
   /**
    * name of worker role in configuration files: {@value}
    */
-  public static final String AMBARI_WORKER = "ambari-worker";
-  public static final int AMBARI_SERVER_WEB_UI_PORT = 80;
+  String AMBARI_WORKER = "ambari-worker";
+  int AMBARI_SERVER_WEB_UI_PORT = 80;
+  String AMBARI_SERVER_WEB_UI_PATH = "/hmc/html/index.php";
 
-  public static final String AMBARI_DEFAULT_PROPERTIES = "whirr-ambari-default.properties";
+  String AMBARI_DEFAULT_PROPERTIES = "whirr-ambari-default.properties";
 
-  public static final String KEY_INSTALL_FUNCTION = "whirr.ambari.install-function";
-  public static final String KEY_CONFIGURE_FUNCTION = "whirr.ambari.configure-function";
+  String KEY_INSTALL_FUNCTION = "whirr.ambari.install-function";
+  String KEY_CONFIGURE_FUNCTION = "whirr.ambari.configure-function";
 
 
-  public static final String KEY_TARBALL_URL = "whirr.ambari.tarball.url";
-  public static final String KEY_START_FUNCTION = "whirr.ambari.start-function";
+  String FUNCTION_INSTALL = "install_ambari";
+  String FUNCTION_POST_CONFIGURE = "configure_ambari";
+  String AMBARI_START = "ambari_start";
+  String AMBARI_STOP = "ambari_stop";
 
-  public static final String FUNCTION_INSTALL = "install_ambari";
-  public static final String FUNCTION_POST_CONFIGURE = "configure_ambari";
-  public static final String FUNCTION_START = "start_ambari";
+  String PROXY_SHELL = "ambari-proxy.sh";
 
-  public static final String PROXY_SHELL = "ambari-proxy.sh";
+  String AMBARI_FUNCTIONS = "ambari_functions";
 
+  /**
+   * This is here to stop checkstyle complaining about an interface with no methods.
+   * If CS didn't also complain about wildcarded static imports from a class that 
+   * would be used instead.
+   */
+  String toString();
 }

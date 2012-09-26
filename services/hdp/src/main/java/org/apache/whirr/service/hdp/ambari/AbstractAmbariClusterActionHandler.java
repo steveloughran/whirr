@@ -39,7 +39,8 @@ import java.util.Set;
 
 import static org.apache.whirr.RolePredicates.role;
 
-public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHandlerSupport {
+public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHandlerSupport 
+implements AmbariConstants {
 
 
   private static final Logger LOG =
@@ -49,14 +50,14 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
   public static InetAddress getAmbariServerPublicAddress(Cluster cluster)
     throws IOException {
     return cluster.getInstanceMatching(
-      RolePredicates.role(AmbariConstants.AMBARI_SERVER))
+      RolePredicates.role(AMBARI_SERVER))
                   .getPublicAddress();
   }
 
   public static Set<Cluster.Instance> getAmbariWorkers(Cluster cluster)
     throws IOException {
     return cluster.getInstancesMatching(
-      RolePredicates.role(AmbariConstants.AMBARI_WORKER));
+      RolePredicates.role(AMBARI_WORKER));
   }
 
 
@@ -66,7 +67,7 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
    */
   protected synchronized Configuration getConfiguration(ClusterSpec clusterSpec)
     throws IOException {
-    return getConfiguration(clusterSpec, AmbariConstants.AMBARI_DEFAULT_PROPERTIES);
+    return getConfiguration(clusterSpec, AMBARI_DEFAULT_PROPERTIES);
   }
 
   private File getConfigDir(ClusterSpec clusterSpec) {
@@ -79,7 +80,7 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
 
   protected void createProxyScript(ClusterSpec clusterSpec, Cluster cluster) {
     File configDir = getConfigDir(clusterSpec);
-    File proxyFile = new File(configDir, AmbariConstants.PROXY_SHELL);
+    File proxyFile = new File(configDir, PROXY_SHELL);
     try {
       ClusterProxy proxy = new ClusterProxy(clusterSpec, cluster);
       InetAddress master = getAmbariServerPublicAddress(cluster);
@@ -114,13 +115,13 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
    * @throws BadDeploymentException on any problem
    */
   protected Cluster.Instance extractAmbariServer(ClusterActionEvent event) throws BadDeploymentException {
-    Cluster.Instance instance = locateSingleServerInstance(event, AmbariConstants.AMBARI_SERVER);
+    Cluster.Instance instance = locateSingleServerInstance(event, AMBARI_SERVER);
 
     //verify that the instance isn't also set up to be a worker, as ambari doesn't manage itself.
-    if (instance.getRoles().contains(AmbariConstants.AMBARI_WORKER)) {
-      throw new BadDeploymentException("The " + AmbariConstants.AMBARI_SERVER
+    if (instance.getRoles().contains(AMBARI_WORKER)) {
+      throw new BadDeploymentException("The " + AMBARI_SERVER
                                        + " instance can not also run an " +
-                                       AmbariConstants.AMBARI_WORKER);
+                                       AMBARI_WORKER);
     }
     return instance;
   }
@@ -153,4 +154,6 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
 
     return instances.iterator().next();
   }
+
+
 }

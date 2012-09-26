@@ -22,11 +22,13 @@ import org.apache.whirr.Cluster;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.ClusterActionEvent;
 import org.apache.whirr.service.FirewallManager;
+import org.apache.whirr.service.hdp.hadoop.HdpConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URL;
 import java.util.Properties;
 import java.util.Set;
 
@@ -41,7 +43,7 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
 
   @Override
   public String getRole() {
-    return AmbariConstants.AMBARI_SERVER;
+    return AMBARI_SERVER;
   }
 
 
@@ -50,16 +52,13 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     ClusterSpec clusterSpec = event.getClusterSpec();
 
     String installFunction = getConfiguration(clusterSpec).getString(
-      AmbariConstants.KEY_INSTALL_FUNCTION,
-      AmbariConstants.FUNCTION_INSTALL);
-    String configureFunction = getConfiguration(clusterSpec).getString(
-      AmbariConstants.KEY_CONFIGURE_FUNCTION,
-      AmbariConstants.FUNCTION_POST_CONFIGURE);
-
+      KEY_INSTALL_FUNCTION,
+      FUNCTION_INSTALL);
     addStatement(event, call("retry_helpers"));
+    addStatement(event, call(HdpConstants.HDP_REGISTER_REPO_FUNCTION));
+    addStatement(event, call(AMBARI_FUNCTIONS));
 
-    addStatement(event, call(installFunction, AmbariConstants.AMBARI_SERVER));
-    addStatement(event, call(configureFunction, AmbariConstants.AMBARI_SERVER));
+    addStatement(event, call(installFunction, AMBARI_SERVER));
   }
 
   @Override
@@ -69,12 +68,19 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     Cluster.Instance serverInstance = extractAmbariServer(event);
 
     LOG.info("Authorizing firewall");
+    event.getFirewallManager().addRules(
+      FirewallManager.Rule.create().destination(serverInstance).ports(AMBARI_SERVER_WEB_UI_PORT));
+
     ClusterSpec clusterSpec = event.getClusterSpec();
 
-    event.getFirewallManager().addRules(
-      FirewallManager.Rule.create().destination(serverInstance).ports(AmbariConstants.AMBARI_SERVER_WEB_UI_PORT));
+    String configureFunction = getConfiguration(clusterSpec).getString(
+      KEY_CONFIGURE_FUNCTION,
+      FUNCTION_POST_CONFIGURE);
 
+    addStatement(event, call("retry_helpers"));
+    addStatement(event, call(AMBARI_FUNCTIONS));
 
+    addStatement(event, call(configureFunction, AMBARI_SERVER));
   }
 
   @Override
@@ -83,19 +89,48 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     Cluster cluster = event.getCluster();
 
     LOG.info("Completed configuration of {}", clusterSpec.getClusterName());
-    Cluster.Instance instance = cluster.getInstanceMatching(role(AmbariConstants.AMBARI_SERVER));
-    InetAddress masterPublicAddress = instance.getPublicAddress();
-
-    LOG.info("Ambari web UI available at http://{}:{}",
-             masterPublicAddress.getHostName(),
-             AmbariConstants.AMBARI_SERVER_WEB_UI_PORT);
-
+    URL ambariURL = getAmbariServerURL(cluster);
+    LOG.info("Ambari web UI available at {}", ambariURL);
     Properties config = new Properties();
     createProxyScript(clusterSpec, cluster);
     event.setCluster(new Cluster(cluster.getInstances(), config));
 
     String workerList = createWorkerDescriptionFile(cluster);
     LOG.info("Worker list:\n{}", workerList);
+  }
+
+
+  @Override
+  protected void beforeStart(ClusterActionEvent event) throws IOException, InterruptedException {
+    super.beforeStart(event);
+    addStatement(event, call("retry_helpers"));
+    addStatement(event, call(AMBARI_FUNCTIONS));
+    addStatement(event, call(AMBARI_START, AMBARI_SERVER));
+  }
+
+  @Override
+  protected void beforeStop(ClusterActionEvent event) throws IOException, InterruptedException {
+    super.beforeStop(event);
+    addStatement(event, call("retry_helpers"));
+    addStatement(event, call(AMBARI_FUNCTIONS));
+    addStatement(event, call(AMBARI_STOP, AMBARI_SERVER));
+  }
+
+  /**
+   * Get the public URL of the ambari server in this cluster
+   * @param cluster cluster
+   * @return the externally accessible ambari URL
+   * @throws IOException on problems
+   * @throws BadDeploymentException if the cluster config isn't right.
+   */
+  protected URL getAmbariServerURL(Cluster cluster) throws IOException {
+    Cluster.Instance instance = cluster.getInstanceMatching(role(AMBARI_SERVER));
+    InetAddress masterPublicAddress = instance.getPublicAddress();
+
+    return new URL("http",
+                   masterPublicAddress.getHostName(),
+                   AMBARI_SERVER_WEB_UI_PORT,
+                   AMBARI_SERVER_WEB_UI_PATH);
   }
 
   /**
