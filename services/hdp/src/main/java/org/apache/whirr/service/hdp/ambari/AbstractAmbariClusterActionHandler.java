@@ -24,7 +24,6 @@ import com.google.common.io.Files;
 import org.apache.commons.configuration.Configuration;
 import org.apache.whirr.Cluster;
 import org.apache.whirr.ClusterSpec;
-import org.apache.whirr.RolePredicates;
 import org.apache.whirr.service.ClusterActionEvent;
 import org.apache.whirr.service.ClusterActionHandlerSupport;
 import org.apache.whirr.service.hdp.BadDeploymentException;
@@ -35,30 +34,45 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Set;
 
-import static org.apache.whirr.RolePredicates.role;
+public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHandlerSupport {
 
-public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHandlerSupport 
-implements AmbariConstants {
+
+  public static final String RETRY_HELPERS = "retry_helpers";
+  /**
+   * name of server roles in configuration files: {@value}
+   */
+  public static final String AMBARI_SERVER = "ambari-server";
+
+
+  /**
+   * name of worker role in configuration files: {@value}
+   */
+  public static final String AMBARI_WORKER = "ambari-worker";
+  public static final int AMBARI_SERVER_WEB_UI_PORT = 80;
+  public static final String AMBARI_SERVER_WEB_UI_PATH = "/hmc/html/index.php";
+
+  public static final String AMBARI_DEFAULT_PROPERTIES = "whirr-ambari-default.properties";
+
+  public static final String KEY_INSTALL_FUNCTION = "whirr.ambari.install-function";
+  public static final String KEY_CONFIGURE_FUNCTION = "whirr.ambari.configure-function";
+  public static final String KEY_PRIVATE_KEY_FILE = "whirr.ambari.private-key-file";
+  public static final String KEY_PUBLIC_KEY_FILE = "whirr.ambari.public-key-file";
+  public static final String KEY_WORKER_DEST_FILE = "whirr.ambari.worker-list-file";
+
+
+  public static final String FUNCTION_INSTALL = "install_ambari";
+  public static final String FUNCTION_POST_CONFIGURE = "configure_ambari";
+  public static final String AMBARI_START = "ambari_start";
+  public static final String AMBARI_STOP = "ambari_stop";
+
+  public static final String PROXY_SHELL = "ambari-proxy.sh";
+
+  public static final String AMBARI_FUNCTIONS = "ambari_functions";
 
 
   private static final Logger LOG =
     LoggerFactory.getLogger(AbstractAmbariClusterActionHandler.class);
-
-
-  public static InetAddress getAmbariServerPublicAddress(Cluster cluster)
-    throws IOException {
-    return cluster.getInstanceMatching(
-      RolePredicates.role(AMBARI_SERVER))
-                  .getPublicAddress();
-  }
-
-  public static Set<Cluster.Instance> getAmbariWorkers(Cluster cluster)
-    throws IOException {
-    return cluster.getInstancesMatching(
-      RolePredicates.role(AMBARI_WORKER));
-  }
 
 
   /**
@@ -69,6 +83,12 @@ implements AmbariConstants {
     throws IOException {
     return getConfiguration(clusterSpec, AMBARI_DEFAULT_PROPERTIES);
   }
+
+  protected synchronized Configuration getConfiguration(ClusterActionEvent event)
+    throws IOException {
+    return getConfiguration(event.getClusterSpec());
+  }
+
 
   private File getConfigDir(ClusterSpec clusterSpec) {
     File configDir = new File(new File(System.getProperty("user.home")),
@@ -83,7 +103,7 @@ implements AmbariConstants {
     File proxyFile = new File(configDir, PROXY_SHELL);
     try {
       ClusterProxy proxy = new ClusterProxy(clusterSpec, cluster);
-      InetAddress master = getAmbariServerPublicAddress(cluster);
+      InetAddress master = Utils.getAmbariServerPublicAddress(cluster);
       String script = String.format(
         "echo 'Running proxy to Ambari cluster at %s. "
         + "Use Ctrl-c to quit.'\n", master.getHostName())
@@ -127,7 +147,7 @@ implements AmbariConstants {
   }
 
   /**
-   * Extract the single ambari server in a cluster. This verifies that there is exactly one such
+   * Extract the single server in a cluster. This verifies that there is exactly one such
    * server, and that it is not also a worker
    * @param event the event containing the cluster & its spec
    * @param role role to look for
@@ -137,22 +157,7 @@ implements AmbariConstants {
 
   public static Cluster.Instance locateSingleServerInstance(ClusterActionEvent event, String role) throws BadDeploymentException {
     Cluster cluster = event.getCluster();
-    if (cluster.getInstances() == null) {
-      throw new BadDeploymentException("Server location cannot be performed until the cluster is instantiated");
-    }
-    ClusterSpec clusterSpec = event.getClusterSpec();
-    Set<Cluster.Instance> instances = cluster.getInstancesMatching(role(role));
-    if (instances.isEmpty()) {
-      throw new BadDeploymentException("No " + role
-                                       + " instance in cluster " + cluster.toString()
-                                       + " from " + clusterSpec);
-    }
-    if (instances.size() > 1) {
-      throw new BadDeploymentException("More than one " + role
-                                       + " instance in cluster" + cluster.toString());
-    }
-
-    return instances.iterator().next();
+    return Utils.locateSingleServerInstance(role, cluster);
   }
 
 

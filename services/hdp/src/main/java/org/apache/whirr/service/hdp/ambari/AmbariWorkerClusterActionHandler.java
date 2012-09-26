@@ -18,19 +18,26 @@
 
 package org.apache.whirr.service.hdp.ambari;
 
-import org.apache.whirr.Cluster;
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.io.FileUtils;
 import org.apache.whirr.service.ClusterActionEvent;
+import org.apache.whirr.service.hdp.BadDeploymentException;
+import org.jclouds.scriptbuilder.statements.ssh.AuthorizeRSAPublicKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.Set;
+import java.util.LinkedList;
+import java.util.List;
 
 public final class AmbariWorkerClusterActionHandler extends AbstractAmbariClusterActionHandler {
 
 
   private static final Logger LOG =
     LoggerFactory.getLogger(AmbariWorkerClusterActionHandler.class);
+  private File pubKeyFile;
+  private String workerPubKey;
 
 
   @Override
@@ -40,14 +47,44 @@ public final class AmbariWorkerClusterActionHandler extends AbstractAmbariCluste
 
 
   @Override
+  protected void beforeBootstrap(ClusterActionEvent event) throws IOException, InterruptedException {
+    Configuration conf = getConfiguration(event);
+    pubKeyFile = getFile(conf, KEY_PUBLIC_KEY_FILE);
+    if (pubKeyFile == null) {
+      throw new BadDeploymentException("No public key for Ambari Workers defined in " + KEY_PUBLIC_KEY_FILE);
+    }
+    workerPubKey = FileUtils.readFileToString(pubKeyFile, "US-ASCII");
+
+  }
+
+  @Override
   protected void beforeConfigure(ClusterActionEvent event) throws IOException, InterruptedException {
-    Cluster.Instance serverInstance = extractAmbariServer(event);
+//    Cluster.Instance serverInstance = extractAmbariServer(event);
+
+    List<String> keys= new LinkedList<String>();
+    keys.add(workerPubKey);
+    
+    
+    AuthorizeRSAPublicKeys authKeys= new AuthorizeRSAPublicKeys(keys);
+      
+    addStatement(event,authKeys);
+
+//    File privateKey = getFile(conf, KEY_PRIVATE_KEY_FILE);
+
 
   }
 
   @Override
   protected void afterStart(ClusterActionEvent event) throws IOException, InterruptedException {
-    Set<Cluster.Instance> instances = getAmbariWorkers(event.getCluster());
-    LOG.info("Started {} ambari workers", instances.size());
+
+  }
+
+  protected File getFile(Configuration conf, String key) {
+    String filename = conf.getString(key, null);
+    if (filename == null) {
+      return null;
+    } else {
+      return new File(filename);
+    }
   }
 }

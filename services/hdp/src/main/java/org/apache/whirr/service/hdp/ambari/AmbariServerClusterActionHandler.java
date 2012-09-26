@@ -18,6 +18,8 @@
 
 package org.apache.whirr.service.hdp.ambari;
 
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.io.FileUtils;
 import org.apache.whirr.Cluster;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.ClusterActionEvent;
@@ -26,10 +28,10 @@ import org.apache.whirr.service.hdp.hadoop.HdpConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URL;
-import java.util.Properties;
 import java.util.Set;
 
 import static org.apache.whirr.RolePredicates.role;
@@ -54,7 +56,7 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     String installFunction = getConfiguration(clusterSpec).getString(
       KEY_INSTALL_FUNCTION,
       FUNCTION_INSTALL);
-    addStatement(event, call("retry_helpers"));
+    addStatement(event, call(RETRY_HELPERS));
     addStatement(event, call(HdpConstants.HDP_REGISTER_REPO_FUNCTION));
     addStatement(event, call(AMBARI_FUNCTIONS));
 
@@ -77,7 +79,7 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
       KEY_CONFIGURE_FUNCTION,
       FUNCTION_POST_CONFIGURE);
 
-    addStatement(event, call("retry_helpers"));
+    addStatement(event, call(RETRY_HELPERS));
     addStatement(event, call(AMBARI_FUNCTIONS));
 
     addStatement(event, call(configureFunction, AMBARI_SERVER));
@@ -89,29 +91,43 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     Cluster cluster = event.getCluster();
 
     LOG.info("Completed configuration of {}", clusterSpec.getClusterName());
-    URL ambariURL = getAmbariServerURL(cluster);
-    LOG.info("Ambari web UI available at {}", ambariURL);
-    Properties config = new Properties();
     createProxyScript(clusterSpec, cluster);
-    event.setCluster(new Cluster(cluster.getInstances(), config));
-
-    String workerList = createWorkerDescriptionFile(cluster);
-    LOG.info("Worker list:\n{}", workerList);
   }
 
 
   @Override
   protected void beforeStart(ClusterActionEvent event) throws IOException, InterruptedException {
     super.beforeStart(event);
-    addStatement(event, call("retry_helpers"));
+    addStatement(event, call(RETRY_HELPERS));
     addStatement(event, call(AMBARI_FUNCTIONS));
     addStatement(event, call(AMBARI_START, AMBARI_SERVER));
   }
 
   @Override
+  protected void afterStart(ClusterActionEvent event) throws IOException, InterruptedException {
+    super.afterStart(event);
+    Cluster cluster = event.getCluster();
+    URL ambariURL = getAmbariServerURL(cluster);
+    LOG.info("Ambari web UI available at {}", ambariURL);
+    String workerList = createWorkerDescriptionFile(cluster);
+    LOG.info("Worker list:\n{}", workerList);
+    Configuration conf = getConfiguration(event.getClusterSpec());
+    String workerDestFilename = conf.getString(KEY_WORKER_DEST_FILE, null);
+    if (workerDestFilename != null) {
+      File destFile = new File(workerDestFilename);
+      try {
+        FileUtils.writeStringToFile(destFile, workerList);
+        LOG.info("Worker list file: {}", destFile);
+      } catch (IOException e) {
+        LOG.error("Failed to write worker list to " + destFile, e);
+      }
+    }
+}
+
+  @Override
   protected void beforeStop(ClusterActionEvent event) throws IOException, InterruptedException {
     super.beforeStop(event);
-    addStatement(event, call("retry_helpers"));
+    addStatement(event, call(RETRY_HELPERS));
     addStatement(event, call(AMBARI_FUNCTIONS));
     addStatement(event, call(AMBARI_STOP, AMBARI_SERVER));
   }
@@ -146,14 +162,31 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
 
   protected String createWorkerDescriptionFile(Cluster cluster) throws IOException {
 
-    Set<Cluster.Instance> workers = getAmbariWorkers(cluster);
-
-
-    StringBuilder builder = new StringBuilder(workers.size() * 64);
-    for (Cluster.Instance worker : workers) {
-      builder.append(worker.getPrivateAddress().getCanonicalHostName()).append("\n");
+    Cluster.Instance[] workers = getAmbariWorkerArray(cluster);
+    int workerCount = workers.length;
+    if (workerCount == 0) {
+      return null;
     }
+
+    StringBuilder builder = new StringBuilder(workers.length * 64);
+
+    //this loop goes out of its way to avoid leaving a trailing newline at 
+    //the end of the the list.
+    for (int i = 0; i < workerCount; i++) {
+      builder.append(workers[i].getPrivateAddress().getCanonicalHostName());
+      if (i < (workerCount - 1)) {
+        builder.append("\n");
+      }
+    }
+
     return builder.toString();
+  }
+
+  private Cluster.Instance[] getAmbariWorkerArray(Cluster cluster) throws IOException {
+    Set<Cluster.Instance> workerSet = Utils.getAmbariWorkers(cluster);
+
+    Cluster.Instance[] workers = workerSet.toArray(new Cluster.Instance[workerSet.size()]);
+    return workers;
   }
 
 
