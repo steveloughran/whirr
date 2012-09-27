@@ -24,11 +24,17 @@ import org.apache.whirr.service.hdp.BadDeploymentException;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 
 import static org.apache.whirr.RolePredicates.role;
 
 public class Utils {
+
+  protected static final int KEYSIZE = 1024;
+
   public static InetAddress getAmbariServerPublicAddress(Cluster cluster)
     throws IOException {
     return cluster.getInstanceMatching(
@@ -65,5 +71,37 @@ public class Utils {
     }
 
     return instances.iterator().next();
+  }
+
+  /**
+   * {@link http://www.javamex.com/tutorials/cryptography/rsa_encryption.shtml}
+   * @return
+   * @throws NoSuchAlgorithmException
+   */
+  public static KeyPair generateKeyPair() throws NoSuchAlgorithmException {
+    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+    keyGen.initialize(KEYSIZE);
+    KeyPair keyPair = keyGen.genKeyPair();
+    return keyPair;
+  }
+
+  public static String hexPublicKey(KeyPair keyPair) {
+    byte[] key = keyPair.getPublic().getEncoded();
+    return hexify(key);
+  }
+  
+  public static String hexPrivateKey(KeyPair keyPair) {
+    byte[] key = keyPair.getPrivate().getEncoded();
+    return hexify(key);
+  }
+  
+  static String hexify(byte[] bytes) {
+    StringBuilder sb = new StringBuilder();
+    // Send all output to the Appendable object sb
+    for (byte b : bytes) {
+      String hex = String.format("%02x", b);
+      sb.append(hex);
+    }
+    return sb.toString();
   }
 }
