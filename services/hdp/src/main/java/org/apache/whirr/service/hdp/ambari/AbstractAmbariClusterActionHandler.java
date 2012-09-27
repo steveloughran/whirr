@@ -21,7 +21,10 @@ package org.apache.whirr.service.hdp.ambari;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.io.Files;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.KeyPair;
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.io.FileUtils;
 import org.apache.whirr.Cluster;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.ClusterActionEvent;
@@ -32,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 
@@ -58,6 +62,11 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
   public static final String KEY_CONFIGURE_FUNCTION = "whirr.ambari.configure-function";
   public static final String KEY_PRIVATE_KEY_FILE = "whirr.ambari.private-key-file";
   public static final String KEY_PUBLIC_KEY_FILE = "whirr.ambari.public-key-file";
+  /**
+   * If this is set, the keys are generated. If not, the key files must exist
+   */
+  public static final String KEY_GENERATE_PUBLIC_KEYS = "whirr.ambari.generate-public-keys";
+  
   public static final String KEY_WORKER_DEST_FILE = "whirr.ambari.worker-list-file";
 
 
@@ -160,5 +169,82 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
     return Utils.locateSingleServerInstance(role, cluster);
   }
 
+
+  public File bindToExistingFile(String key, String path) throws FileNotFoundException {
+    File file= new File(path);
+    if (!file.exists()) {
+      throw new FileNotFoundException(
+        String.format("File referenced by key %s not found %s", key, file.getAbsolutePath()));
+    }
+    return file;
+  }
+
+  /**
+   * read and validate ssh key options
+   * @param conf configuration
+   * @return true if the keys are to be generated
+   * @throws IOException
+   */
+  public boolean validateSSHKeyOptions(Configuration conf) throws IOException {
+    boolean generate = conf.getBoolean(KEY_GENERATE_PUBLIC_KEYS, false);
+    if (!generate) {
+      String privateKeyFile = conf.getString(KEY_PRIVATE_KEY_FILE, "");
+      bindToExistingFile(KEY_PRIVATE_KEY_FILE, privateKeyFile);
+      String publicKeyFile = conf.getString(KEY_PUBLIC_KEY_FILE, "");
+      bindToExistingFile(KEY_PUBLIC_KEY_FILE, publicKeyFile);
+    } else {
+      throw new BadDeploymentException("Keygen not yet working");
+    }
+    return generate;
+  }
+    public Configuration createOrValidateKeys(Configuration conf) throws IOException {
+    if (validateSSHKeyOptions(conf)) {
+      return createAndAddKeys(conf);
+    } else {
+      return conf;
+    }
+  }
+  
+  public String loadPublicKey(Configuration conf) throws IOException {
+    String publicKeyFile = conf.getString(KEY_PUBLIC_KEY_FILE, "");
+    File file = bindToExistingFile(KEY_PUBLIC_KEY_FILE, publicKeyFile);
+    String s = FileUtils.readFileToString(file);
+    if (s==null || s.isEmpty()) {
+      throw new BadDeploymentException(String.format("The contents of the file %s are empty, not a public key", file));
+    }
+    return s;
+  }
+
+
+  /**
+   * Create a keypair and add it to the configuration. 
+   * 
+   * @param conf
+   * @return
+   * @throws IOException
+   */
+  public Configuration createAndAddKeys(Configuration conf) throws IOException {
+    try {
+      String destFilename = conf.getString(KEY_PRIVATE_KEY_FILE, "");
+
+      File keyFile;
+      if (!destFilename.isEmpty()) {
+        keyFile = new File(destFilename);
+      } else {
+        keyFile = File.createTempFile("ssh", "-key");
+      }
+      //absolutize
+      String keyFileAbsolutePath = keyFile.getAbsolutePath();
+      conf.setProperty(KEY_PRIVATE_KEY_FILE, keyFileAbsolutePath);
+      KeyPair sshKeys = Utils.createSshKeys();
+      LOG.debug("saving to {}", keyFileAbsolutePath);
+      Utils.saveKeyPair(sshKeys, keyFile, "ambari-generated");
+      File pubFile = Utils.publicKeyPath(keyFile);
+      conf.setProperty(KEY_PUBLIC_KEY_FILE, pubFile.getAbsolutePath());
+      return conf;
+    } catch (JSchException e) {
+      throw new IOException("Failed to create Ambari public Keys "+e,e);
+    }
+  }
 
 }
