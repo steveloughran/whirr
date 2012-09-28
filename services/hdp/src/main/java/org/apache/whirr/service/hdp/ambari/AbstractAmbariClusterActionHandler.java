@@ -31,6 +31,8 @@ import org.apache.whirr.service.ClusterActionEvent;
 import org.apache.whirr.service.ClusterActionHandlerSupport;
 import org.apache.whirr.service.hdp.BadDeploymentException;
 import org.apache.whirr.service.hdp.ClusterProxy;
+import org.jclouds.compute.reference.ComputeServiceConstants;
+import org.jclouds.scriptbuilder.statements.ssh.AuthorizeRSAPublicKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +40,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHandlerSupport {
 
@@ -66,7 +71,7 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
    * If this is set, the keys are generated. If not, the key files must exist
    */
   public static final String KEY_GENERATE_PUBLIC_KEYS = "whirr.ambari.generate-public-keys";
-  
+
   public static final String KEY_WORKER_DEST_FILE = "whirr.ambari.worker-list-file";
 
 
@@ -82,6 +87,7 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
 
   private static final Logger LOG =
     LoggerFactory.getLogger(AbstractAmbariClusterActionHandler.class);
+  protected static final boolean SERVER_AND_WORKER_MUST_NOT_COEXIST = false;
 
 
   /**
@@ -147,7 +153,7 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
     Cluster.Instance instance = locateSingleServerInstance(event, AMBARI_SERVER);
 
     //verify that the instance isn't also set up to be a worker, as ambari doesn't manage itself.
-    if (instance.getRoles().contains(AMBARI_WORKER)) {
+    if (SERVER_AND_WORKER_MUST_NOT_COEXIST && instance.getRoles().contains(AMBARI_WORKER)) {
       throw new BadDeploymentException("The " + AMBARI_SERVER
                                        + " instance can not also run an " +
                                        AMBARI_WORKER);
@@ -170,11 +176,11 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
   }
 
 
-  public File bindToExistingFile(String key, String path) throws FileNotFoundException {
-    File file= new File(path);
+  protected File bindToExistingFile(String key, String path) throws FileNotFoundException {
+    File file = new File(path);
     if (!file.exists()) {
       throw new FileNotFoundException(
-        String.format("File referenced by key %s not found %s", key, file.getAbsolutePath()));
+        String.format("%s file not found %s", key, file.getAbsolutePath()));
     }
     return file;
   }
@@ -185,66 +191,81 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
    * @return true if the keys are to be generated
    * @throws IOException
    */
-  public boolean validateSSHKeyOptions(Configuration conf) throws IOException {
+  protected boolean validateSSHKeyOptions(Configuration conf, boolean filesMustExist) throws IOException {
     boolean generate = conf.getBoolean(KEY_GENERATE_PUBLIC_KEYS, false);
-    if (!generate) {
-      String privateKeyFile = conf.getString(KEY_PRIVATE_KEY_FILE, "");
+    String privateKeyFile = conf.getString(KEY_PRIVATE_KEY_FILE, "");
+    if (privateKeyFile == null || privateKeyFile.isEmpty()) {
+      throw new BadDeploymentException("Unset Property " + KEY_PRIVATE_KEY_FILE);
+    }
+    String publicKeyFile = Utils.publicKeyPath(new File(privateKeyFile)).getAbsolutePath();
+    boolean filesExist = false;
+    if (filesMustExist || !generate) {
       bindToExistingFile(KEY_PRIVATE_KEY_FILE, privateKeyFile);
-      String publicKeyFile = conf.getString(KEY_PUBLIC_KEY_FILE, "");
-      bindToExistingFile(KEY_PUBLIC_KEY_FILE, publicKeyFile);
-    } else {
-      throw new BadDeploymentException("Keygen not yet working");
+      bindToExistingFile("public key", publicKeyFile);
     }
     return generate;
   }
-    public Configuration createOrValidateKeys(Configuration conf) throws IOException {
-    if (validateSSHKeyOptions(conf)) {
-      return createAndAddKeys(conf);
-    } else {
-      return conf;
+
+  protected void createOrValidateKeys(Configuration conf) throws IOException {
+    if (validateSSHKeyOptions(conf, false)) {
+      createKeys(conf, false);
     }
   }
-  
-  public String loadPublicKey(Configuration conf) throws IOException {
-    String publicKeyFile = conf.getString(KEY_PUBLIC_KEY_FILE, "");
-    File file = bindToExistingFile(KEY_PUBLIC_KEY_FILE, publicKeyFile);
+
+  protected String loadPublicKey(Configuration conf) throws IOException {
+    File privateKeyFile = bindToPrivateKeyFile(conf);
+    String publicKeyFile = Utils.publicKeyPath(privateKeyFile).getAbsolutePath();
+    File file = bindToExistingFile("public key", publicKeyFile);
+
     String s = FileUtils.readFileToString(file);
-    if (s==null || s.isEmpty()) {
+    if (s == null || s.isEmpty()) {
       throw new BadDeploymentException(String.format("The contents of the file %s are empty, not a public key", file));
     }
     return s;
   }
 
+  protected File bindToPrivateKeyFile(Configuration conf) {
+    String keyfile = conf.getString(KEY_PRIVATE_KEY_FILE, "");
+    return new File(keyfile);
+  }
+
 
   /**
    * Create a keypair and add it to the configuration. 
-   * 
+   *
+   *
    * @param conf
-   * @return
+   * @param regen
    * @throws IOException
    */
-  public Configuration createAndAddKeys(Configuration conf) throws IOException {
+  protected void createKeys(Configuration conf, boolean regen) throws IOException {
     try {
-      String destFilename = conf.getString(KEY_PRIVATE_KEY_FILE, "");
-
-      File keyFile;
-      if (!destFilename.isEmpty()) {
-        keyFile = new File(destFilename);
-      } else {
-        keyFile = File.createTempFile("ssh", "-key");
+      File keyFile = bindToPrivateKeyFile(conf);
+      File pubKeyFile = Utils.publicKeyPath(keyFile);
+      if (!regen && keyFile.exists() && pubKeyFile.exists()) {
+        LOG.debug("Skipping key generation as pub and private files exist ({} & {})",
+                  keyFile, pubKeyFile);
+        return;
       }
       //absolutize
-      String keyFileAbsolutePath = keyFile.getAbsolutePath();
-      conf.setProperty(KEY_PRIVATE_KEY_FILE, keyFileAbsolutePath);
       KeyPair sshKeys = Utils.createSshKeys();
-      LOG.debug("saving to {}", keyFileAbsolutePath);
-      Utils.saveKeyPair(sshKeys, keyFile, "ambari-generated");
-      File pubFile = Utils.publicKeyPath(keyFile);
-      conf.setProperty(KEY_PUBLIC_KEY_FILE, pubFile.getAbsolutePath());
-      return conf;
+      LOG.info("Creating new SSH key pair at {} and {} ", keyFile, pubKeyFile);
+      Utils.saveKeyPair(sshKeys, keyFile, "ambari-generated at " + new Date().toString());
     } catch (JSchException e) {
-      throw new IOException("Failed to create Ambari public Keys "+e,e);
+      throw new IOException("Failed to create Ambari public Keys " + e, e);
     }
   }
 
+  protected AuthorizeRSAPublicKeys createKeyAuthStatement(Configuration conf) throws IOException {
+    validateSSHKeyOptions(conf, true);
+    String workerPubKey = loadPublicKey(conf);
+    LOG.info("Authorizing public key {} ", workerPubKey);
+    List<String> keys = new LinkedList<String>();
+    keys.add(workerPubKey);
+    return new AuthorizeRSAPublicKeys(keys);
+  }
+  
+/*  protected void incrementTimeouts() {
+    ComputeServiceConstants.Timeouts.scriptComplete=20*60000;
+  }*/
 }

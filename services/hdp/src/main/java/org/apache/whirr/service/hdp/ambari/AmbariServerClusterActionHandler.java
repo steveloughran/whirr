@@ -53,7 +53,8 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
   protected void beforeBootstrap(ClusterActionEvent event) throws IOException {
     ClusterSpec clusterSpec = event.getClusterSpec();
 
-    String installFunction = getConfiguration(clusterSpec).getString(
+    Configuration conf = getConfiguration(clusterSpec);
+    String installFunction = conf.getString(
       KEY_INSTALL_FUNCTION,
       FUNCTION_INSTALL);
     addStatement(event, call(RETRY_HELPERS));
@@ -61,6 +62,9 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     addStatement(event, call(AMBARI_FUNCTIONS));
 
     addStatement(event, call(installFunction, AMBARI_SERVER));
+
+    createOrValidateKeys(conf);
+    addStatement(event, createKeyAuthStatement(conf));
   }
 
   @Override
@@ -122,7 +126,9 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
         LOG.error("Failed to write worker list to " + destFile, e);
       }
     }
-}
+    File keyFile = bindToPrivateKeyFile(conf);
+    LOG.info("Private Key file for worker access is : " + keyFile.getAbsolutePath());
+  }
 
   @Override
   protected void beforeStop(ClusterActionEvent event) throws IOException, InterruptedException {
