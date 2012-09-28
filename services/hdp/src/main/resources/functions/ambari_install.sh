@@ -28,7 +28,8 @@ function ambari_install() {
     exit 1;
   fi
  
-  retry_yum -y update
+#   retry_yum update -y yum
+
   local PACKAGES="hmc curl"
   
   echo "about to install $PACKAGES from HDP release $HDP_VERSION"
