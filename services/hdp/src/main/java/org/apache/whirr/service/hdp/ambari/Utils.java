@@ -18,15 +18,16 @@
 
 package org.apache.whirr.service.hdp.ambari;
 
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.KeyPair;
 import org.apache.whirr.Cluster;
 import org.apache.whirr.RolePredicates;
 import org.apache.whirr.service.hdp.BadDeploymentException;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 
 import static org.apache.whirr.RolePredicates.role;
@@ -73,29 +74,8 @@ public class Utils {
     return instances.iterator().next();
   }
 
-  /**
-   * {@link http://www.javamex.com/tutorials/cryptography/rsa_encryption.shtml}
-   * @return
-   * @throws NoSuchAlgorithmException
-   */
-  public static KeyPair generateKeyPair() throws NoSuchAlgorithmException {
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-    keyGen.initialize(KEYSIZE);
-    KeyPair keyPair = keyGen.genKeyPair();
-    return keyPair;
-  }
 
-  public static String hexPublicKey(KeyPair keyPair) {
-    byte[] key = keyPair.getPublic().getEncoded();
-    return hexify(key);
-  }
-  
-  public static String hexPrivateKey(KeyPair keyPair) {
-    byte[] key = keyPair.getPrivate().getEncoded();
-    return hexify(key);
-  }
-  
-  static String hexify(byte[] bytes) {
+  public static String hexify(byte[] bytes) {
     StringBuilder sb = new StringBuilder();
     // Send all output to the Appendable object sb
     for (byte b : bytes) {
@@ -103,5 +83,46 @@ public class Utils {
       sb.append(hex);
     }
     return sb.toString();
+  }
+
+  /**
+   * {@link http://www.jcraft.com/jsch/examples/KeyGen.java.html}
+   * @return a new keypair
+   */
+  public static KeyPair createSshKeys() throws JSchException {
+    JSch jsch = new JSch();
+    KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
+    return keyPair;
+  }
+
+  /**
+   * Writes a keypair to file
+   *
+   * @param keyPair key pair
+   * @param privateKeyFile filename to use for the private key; the same filename with .pub at the end becomes
+   * the public key.
+   * @param comment a comment; use "" for none.
+   * @return the public key file
+   * @throws IOException any IO problem.
+   */
+  public static File saveKeyPair(KeyPair keyPair, File privateKeyFile, String comment) throws IOException {
+    keyPair.writePrivateKey(privateKeyFile.getAbsolutePath());
+    File publicKeyFile = publicKeyPath(privateKeyFile);
+    keyPair.writePublicKey(publicKeyFile.getAbsolutePath(), comment);
+    //now the private key has to have group read perms removed
+    makeOwnerReadAccessOnly(privateKeyFile);
+    makeOwnerReadAccessOnly(publicKeyFile);
+    return publicKeyFile;
+  }
+
+  public static File publicKeyPath(File privateKeyFile) {
+    return new File(privateKeyFile.getAbsolutePath() + ".pub");
+  }
+
+  public static void makeOwnerReadAccessOnly(File file) {
+    //non readable by all
+    file.setReadable(false, false);
+    //readable by root alone
+    file.setReadable(true, true);
   }
 }
