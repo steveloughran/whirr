@@ -67,7 +67,6 @@ gpgkey=${keyurl}
 EOF
 
   echo "installed new repo file ${REPOFILE} with repository ${baseurl} and ${utilsurl}"
-  retry_yum update -y
   REGISTER_HORTONWORKS_REPO=1
 }
 
