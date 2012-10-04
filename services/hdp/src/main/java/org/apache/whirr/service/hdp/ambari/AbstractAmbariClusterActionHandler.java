@@ -31,7 +31,6 @@ import org.apache.whirr.service.ClusterActionEvent;
 import org.apache.whirr.service.ClusterActionHandlerSupport;
 import org.apache.whirr.service.hdp.BadDeploymentException;
 import org.apache.whirr.service.hdp.ClusterProxy;
-import org.jclouds.compute.reference.ComputeServiceConstants;
 import org.jclouds.scriptbuilder.statements.ssh.AuthorizeRSAPublicKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -264,8 +263,5 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
     keys.add(workerPubKey);
     return new AuthorizeRSAPublicKeys(keys);
   }
-  
-/*  protected void incrementTimeouts() {
-    ComputeServiceConstants.Timeouts.scriptComplete=20*60000;
-  }*/
+
 }
