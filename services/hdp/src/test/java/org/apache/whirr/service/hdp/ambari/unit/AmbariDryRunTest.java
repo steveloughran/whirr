@@ -112,27 +112,6 @@ public class AmbariDryRunTest extends BaseServiceDryRunTest {
   }
 
   @Test
-  public void testServerWorkerSameVMForbidden() throws Exception {
-    try {
-      DryRunModule.DryRun dryRun = launchCluster("1 " + AMBARI_SERVER + "+" + AMBARI_WORKER);
-      fail("Expected an error, got a cluster ");
-    } catch (RuntimeException e) {
-      assertWrapsBadDeploymentException(e);
-    }
-  }
-
-
-  @Test
-  public void testClusterMustHaveAmbariServer() throws Exception {
-    try {
-      DryRunModule.DryRun dryRun = launchCluster("1 " + AMBARI_WORKER);
-      fail("Expected an error, got a cluster ");
-    } catch (RuntimeException e) {
-      assertWrapsBadDeploymentException(e);
-    }
-  }
-
-  @Test
   public void testTwoAmbariServersForbidden() throws Exception {
     try {
       DryRunModule.DryRun dryRun = launchCluster("2 " + AMBARI_SERVER + ",2 " + AMBARI_WORKER);
