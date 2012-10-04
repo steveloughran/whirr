@@ -64,7 +64,6 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     addStatement(event, call(installFunction, AMBARI_SERVER));
 
     createOrValidateKeys(conf);
-    addStatement(event, createKeyAuthStatement(conf));
   }
 
   @Override
@@ -79,7 +78,8 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
 
     ClusterSpec clusterSpec = event.getClusterSpec();
 
-    String configureFunction = getConfiguration(clusterSpec).getString(
+    Configuration conf = getConfiguration(clusterSpec);
+    String configureFunction = conf.getString(
       KEY_CONFIGURE_FUNCTION,
       FUNCTION_POST_CONFIGURE);
 
@@ -87,6 +87,8 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     addStatement(event, call(AMBARI_FUNCTIONS));
 
     addStatement(event, call(configureFunction, AMBARI_SERVER));
+    addStatement(event, createKeyAuthStatement(conf));
+
   }
 
   @Override
@@ -150,7 +152,7 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     InetAddress masterPublicAddress = instance.getPublicAddress();
 
     return new URL("http",
-                   masterPublicAddress.getHostName(),
+                   masterPublicAddress.getHostAddress(),
                    AMBARI_SERVER_WEB_UI_PORT,
                    AMBARI_SERVER_WEB_UI_PATH);
   }
