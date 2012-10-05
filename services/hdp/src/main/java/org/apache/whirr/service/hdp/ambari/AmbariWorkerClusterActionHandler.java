@@ -32,12 +32,24 @@ public final class AmbariWorkerClusterActionHandler extends AbstractAmbariCluste
     LoggerFactory.getLogger(AmbariWorkerClusterActionHandler.class);
 
 
+  /**
+   * return {@link #AMBARI_WORKER} always
+   * @return the role.
+   */
   @Override
   public String getRole() {
     return AMBARI_WORKER;
   }
 
 
+  /**
+   * Pre-boostrap actions. The keys are created and validated here, even though it could be left to
+   * the server instances, because the order in which servers are deployed varied -the workers
+   * can do their work first.
+   * @param event event to process
+   * @throws IOException IO problems
+   * @throws InterruptedException interrupted operations.
+   */
   @Override
   protected void beforeBootstrap(ClusterActionEvent event) throws IOException, InterruptedException {
     Configuration conf = getConfiguration(event);
@@ -45,19 +57,22 @@ public final class AmbariWorkerClusterActionHandler extends AbstractAmbariCluste
   }
 
 
+  /**
+   * Pre-config: any final validation and actions for cluster config
+   * @param event event to process
+   * @throws IOException IO problems
+   * @throws InterruptedException interrupted operations.
+   */
   @Override
   protected void beforeConfigure(ClusterActionEvent event) throws IOException, InterruptedException {
 
     //here the cluster should be set up
-//    Cluster.Instance serverInstance = extractAmbariServer(event);
+    if (OPTION_CLUSTER_MUST_HAVE_SERVER) {
+      extractAmbariServer(event);
+    }
 
     Configuration conf = event.getClusterSpec().getConfiguration();
     addStatement(event, createKeyAuthStatement(conf));
-
-  }
-
-  @Override
-  protected void afterStart(ClusterActionEvent event) throws IOException, InterruptedException {
 
   }
 

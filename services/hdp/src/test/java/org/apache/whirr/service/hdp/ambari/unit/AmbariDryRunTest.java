@@ -23,11 +23,14 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.jcraft.jsch.JSchException;
 import org.apache.commons.configuration.ConfigurationException;
+import org.apache.whirr.Cluster;
+import org.apache.whirr.ClusterController;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.BaseServiceDryRunTest;
 import org.apache.whirr.service.DryRunModule;
 import org.apache.whirr.service.hdp.BadDeploymentException;
 import org.apache.whirr.service.hdp.ambari.AbstractAmbariClusterActionHandler;
+import org.apache.whirr.service.hdp.ambari.Utils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +42,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.fail;
 import static org.apache.whirr.service.hdp.ambari.AbstractAmbariClusterActionHandler.AMBARI_SERVER;
 import static org.apache.whirr.service.hdp.ambari.AbstractAmbariClusterActionHandler.AMBARI_WORKER;
@@ -47,6 +52,11 @@ public class AmbariDryRunTest extends BaseServiceDryRunTest {
   private static final Logger LOG =
     LoggerFactory.getLogger(AmbariDryRunTest.class);
 
+  public static class LaunchedDryRun {
+    public DryRunModule.DryRun dryRun;
+    public Cluster cluster;
+  } 
+  
   @Override
   protected Set<String> getInstanceRoles() {
     return ImmutableSet.of(AbstractAmbariClusterActionHandler.AMBARI_SERVER);
@@ -83,7 +93,7 @@ public class AmbariDryRunTest extends BaseServiceDryRunTest {
     return props;
   }
 
-  private DryRunModule.DryRun launchCluster(String template) throws
+  private LaunchedDryRun launchCluster(String template) throws
                                                              ConfigurationException,
                                                              JSchException,
                                                              IOException,
@@ -92,9 +102,21 @@ public class AmbariDryRunTest extends BaseServiceDryRunTest {
     props.put(
       "whirr.instance-templates", template);
     ClusterSpec cookbookWithDefaultRecipe = newClusterSpecForProperties(props);
-    return launchWithClusterSpec(cookbookWithDefaultRecipe);
+    return launchClusterSpec(cookbookWithDefaultRecipe);
   }
 
+  protected LaunchedDryRun launchClusterSpec(ClusterSpec clusterSpec) throws IOException, InterruptedException {
+    ClusterController controller = new ClusterController();
+    DryRunModule.DryRun
+      dryRun =
+      controller.getCompute().apply(clusterSpec).utils().injector().getInstance(DryRunModule.DryRun.class);
+    dryRun.reset();
+    LaunchedDryRun launched = new LaunchedDryRun();
+    launched.dryRun = dryRun;
+    launched.cluster = controller.launchCluster(clusterSpec);
+    return launched;
+  }
+  
   private void assertWrapsBadDeploymentException(RuntimeException e) {
     Throwable cause = e.getCause();
     if (cause == null) {
@@ -107,14 +129,56 @@ public class AmbariDryRunTest extends BaseServiceDryRunTest {
   }
 
   @Test
+  public void testSingleServerAndMultiWorkerCluster() throws Exception {
+    LaunchedDryRun dryRun = launchCluster("1 " + AMBARI_SERVER + ",2 " + AMBARI_WORKER);
+    Cluster cluster = dryRun.cluster;
+    Utils.getAmbariServer(cluster);
+    Utils.getAmbariServerPublicAddress(cluster);
+  }
+
+  @Test
   public void testServerAndMultiWorkerCluster() throws Exception {
-    DryRunModule.DryRun dryRun = launchCluster("1 " + AMBARI_SERVER + ",2 " + AMBARI_WORKER);
+    LaunchedDryRun dryRun = launchCluster("1 " + AMBARI_SERVER + ",2 " + AMBARI_WORKER);
+    Cluster cluster = dryRun.cluster;
+    String domain = ".example.com";
+    String workerDescriptionFile = Utils.createWorkerDescriptionFile(cluster, domain);
+    Cluster.Instance[] workerArray = Utils.getAmbariWorkerArray(cluster);
+    assertEquals(2, workerArray.length);
+    Cluster.Instance instance = workerArray[0];
+    String hostName = instance.getPrivateAddress().getHostName();
+    assertTrue(workerDescriptionFile.contains(hostName));    
+    assertTrue(workerDescriptionFile.contains(hostName+domain));    
+  }
+
+  @Test
+  public void testServerWorkerSameVMForbidden() throws Exception {
+    if (AbstractAmbariClusterActionHandler.OPTION_SERVER_AND_WORKER_MUST_NOT_COEXIST) {
+      try {
+        launchCluster("1 " + AMBARI_SERVER + "+" + AMBARI_WORKER);
+        fail("Expected an error, got a cluster ");
+      } catch (RuntimeException e) {
+        assertWrapsBadDeploymentException(e);
+      }
+    }
+  }
+
+
+  @Test
+  public void testClusterMustHaveAmbariServer() throws Exception {
+    if (AbstractAmbariClusterActionHandler.OPTION_CLUSTER_MUST_HAVE_SERVER) {
+      try {
+        launchCluster("1 " + AMBARI_WORKER);
+        fail("Expected an error, got a cluster ");
+      } catch (RuntimeException e) {
+        assertWrapsBadDeploymentException(e);
+      }
+    }
   }
 
   @Test
   public void testTwoAmbariServersForbidden() throws Exception {
     try {
-      DryRunModule.DryRun dryRun = launchCluster("2 " + AMBARI_SERVER + ",2 " + AMBARI_WORKER);
+      launchCluster("2 " + AMBARI_SERVER + ",2 " + AMBARI_WORKER);
       fail("Expected an error, got a cluster ");
     } catch (RuntimeException e) {
       assertWrapsBadDeploymentException(e);

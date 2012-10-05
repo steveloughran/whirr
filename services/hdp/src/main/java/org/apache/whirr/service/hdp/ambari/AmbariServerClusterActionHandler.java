@@ -30,11 +30,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.URL;
-import java.util.Set;
 
-import static org.apache.whirr.RolePredicates.role;
 import static org.jclouds.scriptbuilder.domain.Statements.call;
 
 public final class AmbariServerClusterActionHandler extends AbstractAmbariClusterActionHandler {
@@ -43,12 +40,21 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     LoggerFactory.getLogger(AmbariServerClusterActionHandler.class);
 
 
+  /**
+   * return {@link #AMBARI_SERVER} always
+   * @return the role.
+   */
   @Override
   public String getRole() {
     return AMBARI_SERVER;
   }
 
 
+  /**
+   * Boostrap actions: set up what is needed to install the server
+   * @param event event to process
+   * @throws IOException IO problems
+   */
   @Override
   protected void beforeBootstrap(ClusterActionEvent event) throws IOException {
     ClusterSpec clusterSpec = event.getClusterSpec();
@@ -66,6 +72,13 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     createOrValidateKeys(conf);
   }
 
+  /**
+   * Pre-config: any final validation and actions for cluster config
+   * @param event event to process
+   * @throws IOException IO problems
+   * @throws InterruptedException interrupted operations.
+   */
+
   @Override
   protected void beforeConfigure(ClusterActionEvent event) throws IOException,
                                                                   InterruptedException {
@@ -79,6 +92,10 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     ClusterSpec clusterSpec = event.getClusterSpec();
 
     Configuration conf = getConfiguration(clusterSpec);
+    String domain = conf.getString(KEY_INTERNAL_DOMAIN_NAME, "");
+    if(domain.isEmpty()) {
+      LOG.warn("No value provided for " + KEY_INTERNAL_DOMAIN_NAME + " -the worker file is unlikely to be valid");
+    }
     String configureFunction = conf.getString(
       KEY_CONFIGURE_FUNCTION,
       FUNCTION_POST_CONFIGURE);
@@ -101,6 +118,13 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
   }
 
 
+  /**
+   * Pre-start -add the actions to start the service
+   * @param event event to process
+   * @throws IOException IO problems
+   * @throws InterruptedException interrupted operations.
+   */
+
   @Override
   protected void beforeStart(ClusterActionEvent event) throws IOException, InterruptedException {
     super.beforeStart(event);
@@ -109,16 +133,28 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     addStatement(event, call(AMBARI_START, AMBARI_SERVER));
   }
 
+  /**
+   * After start -output the file listing all the workers; print that and the keyfile location.
+   * @param event event to process
+   * @throws IOException IO problems
+   * @throws InterruptedException interrupted operations.
+   */
+
   @Override
   protected void afterStart(ClusterActionEvent event) throws IOException, InterruptedException {
     super.afterStart(event);
     Cluster cluster = event.getCluster();
     URL ambariURL = getAmbariServerURL(cluster);
     LOG.info("Ambari web UI available at {}", ambariURL);
-    String workerList = createWorkerDescriptionFile(cluster);
-    LOG.info("Worker list:\n{}", workerList);
     Configuration conf = getConfiguration(event.getClusterSpec());
     String workerDestFilename = conf.getString(KEY_WORKER_DEST_FILE, null);
+    //get the domain and add a . if needed
+    String domain = conf.getString(KEY_INTERNAL_DOMAIN_NAME, "");
+    if (!domain.isEmpty() && !domain.startsWith(".")) {
+      domain = "." + domain;
+    }
+    String workerList = Utils.createWorkerDescriptionFile(cluster, domain);
+    LOG.info("Worker list:\n{}", workerList);
     if (workerDestFilename != null) {
       File destFile = new File(workerDestFilename);
       try {
@@ -132,69 +168,19 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     LOG.info("Private Key file for worker access is : " + keyFile.getAbsolutePath());
   }
 
+  /**
+   * Stop the server
+   * @param event event to process
+   * @throws IOException IO problems
+   * @throws InterruptedException interrupted operations.
+   */
+
   @Override
   protected void beforeStop(ClusterActionEvent event) throws IOException, InterruptedException {
     super.beforeStop(event);
     addStatement(event, call(RETRY_HELPERS));
     addStatement(event, call(AMBARI_FUNCTIONS));
     addStatement(event, call(AMBARI_STOP, AMBARI_SERVER));
-  }
-
-  /**
-   * Get the public URL of the ambari server in this cluster
-   * @param cluster cluster
-   * @return the externally accessible ambari URL
-   * @throws IOException on problems
-   * @throws BadDeploymentException if the cluster config isn't right.
-   */
-  protected URL getAmbariServerURL(Cluster cluster) throws IOException {
-    Cluster.Instance instance = cluster.getInstanceMatching(role(AMBARI_SERVER));
-    InetAddress masterPublicAddress = instance.getPublicAddress();
-
-    return new URL("http",
-                   masterPublicAddress.getHostAddress(),
-                   AMBARI_SERVER_WEB_UI_PORT,
-                   AMBARI_SERVER_WEB_UI_PATH);
-  }
-
-  /**
-   * This creates all the cluster-local IP Addresses for the cluster, but in a NATted infrastructure
-   * these are all IP addresses that don't resolve outside the cluster; that don't support rDNS
-   * from the Whirr client.
-   *
-   * These need conversion into a set of hostnames, that can only be done in-cluster
-   * @param cluster cluster to work with
-   * @return a string of worker nodes, 1 per line, that is only valid inside the cluster.
-   * @throws IOException if getting the workers fails.
-   */
-
-  protected String createWorkerDescriptionFile(Cluster cluster) throws IOException {
-
-    Cluster.Instance[] workers = getAmbariWorkerArray(cluster);
-    int workerCount = workers.length;
-    if (workerCount == 0) {
-      return null;
-    }
-
-    StringBuilder builder = new StringBuilder(workers.length * 64);
-
-    //this loop goes out of its way to avoid leaving a trailing newline at 
-    //the end of the the list.
-    for (int i = 0; i < workerCount; i++) {
-      builder.append(workers[i].getPrivateAddress().getCanonicalHostName());
-      if (i < (workerCount - 1)) {
-        builder.append("\n");
-      }
-    }
-
-    return builder.toString();
-  }
-
-  private Cluster.Instance[] getAmbariWorkerArray(Cluster cluster) throws IOException {
-    Set<Cluster.Instance> workerSet = Utils.getAmbariWorkers(cluster);
-
-    Cluster.Instance[] workers = workerSet.toArray(new Cluster.Instance[workerSet.size()]);
-    return workers;
   }
 
 

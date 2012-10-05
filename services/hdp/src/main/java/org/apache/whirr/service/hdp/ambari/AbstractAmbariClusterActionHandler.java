@@ -39,9 +39,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URL;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+
+import static org.apache.whirr.RolePredicates.role;
 
 public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHandlerSupport {
 
@@ -57,19 +60,48 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
    * name of worker role in configuration files: {@value}
    */
   public static final String AMBARI_WORKER = "ambari-worker";
+
+  /**
+   * Port that the ambari web server runs on {@value}
+   */
+
   public static final int AMBARI_SERVER_WEB_UI_PORT = 80;
+
+  /**
+   * Path where the Ambari UI lives {@value}
+   */
+
   public static final String AMBARI_SERVER_WEB_UI_PATH = "/hmc/html/index.php";
+
+  /**
+   * Name of the resource containing the default properties
+   * {@value}
+   */
 
   public static final String AMBARI_DEFAULT_PROPERTIES = "whirr-ambari-default.properties";
 
   public static final String KEY_INSTALL_FUNCTION = "whirr.ambari.install-function";
   public static final String KEY_CONFIGURE_FUNCTION = "whirr.ambari.configure-function";
-  public static final String KEY_PRIVATE_KEY_FILE = "whirr.ambari.private-key-file";
-  public static final String KEY_PUBLIC_KEY_FILE = "whirr.ambari.public-key-file";
+
   /**
-   * If this is set, the keys are generated. If not, the key files must exist
+   * path to private key; public key is this plus ".pub"
+   * {@value}
+   */
+  public static final String KEY_PRIVATE_KEY_FILE = "whirr.ambari.private-key-file";
+
+  /**
+   * This is used to determine the internal domain used as a suffix for
+   * hostnames. {@value}
+   */
+  public static final String KEY_INTERNAL_DOMAIN_NAME = "whirr.ambari.internal.domain";
+  /**
+   * If this is set, the keys are generated. If not, the key files must exist: {@value}
    */
   public static final String KEY_GENERATE_PUBLIC_KEYS = "whirr.ambari.generate-public-keys";
+
+  /**
+   * Name of a file to save the worker list to {@value}
+   */
 
   public static final String KEY_WORKER_DEST_FILE = "whirr.ambari.worker-list-file";
 
@@ -86,7 +118,21 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
 
   private static final Logger LOG =
     LoggerFactory.getLogger(AbstractAmbariClusterActionHandler.class);
-  protected static final boolean SERVER_AND_WORKER_MUST_NOT_COEXIST = false;
+
+  /**
+   * This is a compile time policy which declares that a server and worker must not co-exist
+   * {@value}
+   */
+
+  public static final boolean OPTION_SERVER_AND_WORKER_MUST_NOT_COEXIST = false;
+  
+  /**
+   * This is a compile time policy which declares that a cluster must have a server.
+   * During Dev and Test it's useful to not have this requirement.
+   * {@value}
+   */
+
+  public static final boolean OPTION_CLUSTER_MUST_HAVE_SERVER = false;
 
 
   /**
@@ -152,7 +198,7 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
     Cluster.Instance instance = locateSingleServerInstance(event, AMBARI_SERVER);
 
     //verify that the instance isn't also set up to be a worker, as ambari doesn't manage itself.
-    if (SERVER_AND_WORKER_MUST_NOT_COEXIST && instance.getRoles().contains(AMBARI_WORKER)) {
+    if (OPTION_SERVER_AND_WORKER_MUST_NOT_COEXIST && instance.getRoles().contains(AMBARI_WORKER)) {
       throw new BadDeploymentException("The " + AMBARI_SERVER
                                        + " instance can not also run an " +
                                        AMBARI_WORKER);
@@ -264,4 +310,20 @@ public abstract class AbstractAmbariClusterActionHandler extends ClusterActionHa
     return new AuthorizeRSAPublicKeys(keys);
   }
 
+  /**
+   * Get the public URL of the ambari server in this cluster
+   * @param cluster cluster
+   * @return the externally accessible ambari URL
+   * @throws IOException on problems
+   * @throws BadDeploymentException if the cluster config isn't right.
+   */
+  protected URL getAmbariServerURL(Cluster cluster) throws IOException {
+    Cluster.Instance instance = cluster.getInstanceMatching(role(AMBARI_SERVER));
+    InetAddress masterPublicAddress = instance.getPublicAddress();
+
+    return new URL("http",
+                   masterPublicAddress.getHostAddress(),
+                   AMBARI_SERVER_WEB_UI_PORT,
+                   AMBARI_SERVER_WEB_UI_PATH);
+  }
 }

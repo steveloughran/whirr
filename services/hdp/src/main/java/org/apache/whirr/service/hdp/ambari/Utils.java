@@ -38,6 +38,10 @@ public class Utils {
 
   public static InetAddress getAmbariServerPublicAddress(Cluster cluster)
     throws IOException {
+    return getAmbariServer(cluster);
+  }
+
+  public static InetAddress getAmbariServer(Cluster cluster) throws IOException {
     return cluster.getInstanceMatching(
       RolePredicates.role(AbstractAmbariClusterActionHandler.AMBARI_SERVER))
                   .getPublicAddress();
@@ -124,5 +128,47 @@ public class Utils {
     file.setReadable(false, false);
     //readable by root alone
     file.setReadable(true, true);
+  }
+
+  /**
+   * This creates all the cluster-local IP Addresses for the cluster, but in a NATted infrastructure
+   * these are all IP addresses that don't resolve outside the cluster; that don't support rDNS
+   * from the Whirr client.
+   *
+   * These need conversion into a set of hostnames, that can only be done in-cluster
+   *
+   * @param cluster cluster to work with
+   * @param domain the domain, which must be "" or a domain string with a leading "."
+   * @return a string of worker nodes, 1 per line, that is only valid inside the cluster.
+   * @throws IOException if getting the workers fails.
+   */
+
+  public static String createWorkerDescriptionFile(Cluster cluster, String domain) throws IOException {
+
+    Cluster.Instance[] workers = getAmbariWorkerArray(cluster);
+    int workerCount = workers.length;
+    if (workerCount == 0) {
+      return null;
+    }
+
+    StringBuilder builder = new StringBuilder(workers.length * 64);
+
+    //this loop goes out of its way to avoid leaving a trailing newline at 
+    //the end of the the list.
+    for (int i = 0; i < workerCount; i++) {
+      builder.append(workers[i].getPrivateAddress().getHostName());
+      builder.append(domain);
+      if (i < (workerCount - 1)) {
+        builder.append("\n");
+      }
+    }
+
+    return builder.toString();
+  }
+
+  public static Cluster.Instance[] getAmbariWorkerArray(Cluster cluster) throws IOException {
+    Set<Cluster.Instance> workerSet = getAmbariWorkers(cluster);
+
+    return workerSet.toArray(new Cluster.Instance[workerSet.size()]);
   }
 }
