@@ -156,7 +156,7 @@ public class Utils {
     //this loop goes out of its way to avoid leaving a trailing newline at 
     //the end of the the list.
     for (int i = 0; i < workerCount; i++) {
-      builder.append(workers[i].getPrivateAddress().getHostName());
+      builder.append(workers[i].getPrivateAddress().getCanonicalHostName());
       builder.append(domain);
       if (i < (workerCount - 1)) {
         builder.append("\n");
