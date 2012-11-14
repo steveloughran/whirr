@@ -168,7 +168,7 @@ public class ClusterSpec {
           
     FIREWALL_RULES_ROLE(String.class, true, "A comma-separated list of port" +
       " numbers. E.g. 8080,8181. Replace 'role' with an actual role name"),
-              
+        
     VERSION(String.class, false, ""),
     
     RUN_URL_BASE(String.class, false, "The base URL for forming run " + 
@@ -177,6 +177,9 @@ public class ClusterSpec {
     TERMINATE_ALL_ON_LAUNCH_FAILURE(Boolean.class, false, "Whether or not to " +
                                     "automatically terminate all nodes when cluster launch fails for some reason."),
 
+    STORE_CLUSTER_IN_ETC_HOSTS(Boolean.class, false, "Whether or not to " +
+                               "store all cluster IPs and hostnames in /etc/hosts on each node."),
+
     AUTO_HOSTNAME_PREFIX(String.class, false, "If given, used a prefix when automatically " +
                          "generating hostnames. Ignored if AUTO_HOSTNAME_SUFFIX is not also set."),
 
@@ -184,6 +187,8 @@ public class ClusterSpec {
                              "the hostname for the instances."),
 
     JDK_INSTALL_URL(String.class, false, "JDK install URL"),
+    
+    KERBEROS_REALM(String.class, false, "Kerberos realm to use in security configuration"),
                              
     AWS_EC2_PLACEMENT_GROUP(String.class, false, "If given, use this existing EC2 placement group. (aws-ec2 specific option)");
     
@@ -300,6 +305,7 @@ public class ClusterSpec {
   private String runUrlBase;
   
   private boolean terminateAllOnLaunchFailure;
+  private boolean storeClusterInEtcHosts;
 
   private String awsEc2PlacementGroup;
 
@@ -308,6 +314,8 @@ public class ClusterSpec {
   private String autoHostnameSuffix;
   
   private String jdkInstallUrl;
+  
+  private String kerberosRealm;
   
   private Configuration config;
   
@@ -344,6 +352,8 @@ public class ClusterSpec {
 
     setJdkInstallUrl(getString(Property.JDK_INSTALL_URL));
     
+    setKerberosRealm(getString(Property.KERBEROS_REALM));
+    
     setProvider(getString(Property.PROVIDER));
     setEndpoint(getString(Property.ENDPOINT));
     setIdentity(getString(Property.IDENTITY));
@@ -370,7 +380,10 @@ public class ClusterSpec {
     
     setTerminateAllOnLaunchFailure(config.getBoolean(
         Property.TERMINATE_ALL_ON_LAUNCH_FAILURE.getConfigName(), Boolean.TRUE));
-    
+
+    setStoreClusterInEtcHosts(config.getBoolean(
+        Property.STORE_CLUSTER_IN_ETC_HOSTS.getConfigName(), Boolean.FALSE));
+
     setAwsEc2PlacementGroup(getString(Property.AWS_EC2_PLACEMENT_GROUP));
 
     Map<String, List<String>> fr = new HashMap<String, List<String>>();
@@ -432,6 +445,7 @@ public class ClusterSpec {
     r.setRunUrlBase(getRunUrlBase());
     
     r.setTerminateAllOnLaunchFailure(isTerminateAllOnLaunchFailure());
+    r.setStoreClusterInEtcHosts(isStoreClusterInEtcHosts());
 
     r.setAwsEc2PlacementGroup(getAwsEc2PlacementGroup());
 
@@ -439,6 +453,8 @@ public class ClusterSpec {
     r.setAutoHostnameSuffix(getAutoHostnameSuffix());
 
     r.setJdkInstallUrl(getJdkInstallUrl());
+    
+    r.setKerberosRealm(getKerberosRealm());
     
     return r;
   }
@@ -792,6 +808,13 @@ public class ClusterSpec {
     this.terminateAllOnLaunchFailure = terminateAllOnLaunchFailure;
   }
 
+  public boolean isStoreClusterInEtcHosts() {
+    return storeClusterInEtcHosts;
+  }
+  public void setStoreClusterInEtcHosts(boolean storeClusterInEtcHosts) {
+    this.storeClusterInEtcHosts = storeClusterInEtcHosts;
+  }
+
   public String getAwsEc2PlacementGroup() {
     return awsEc2PlacementGroup;
   }
@@ -822,6 +845,14 @@ public class ClusterSpec {
 
   public void setJdkInstallUrl(String jdkInstallUrl) {
     this.jdkInstallUrl = jdkInstallUrl;
+  }
+
+  public String getKerberosRealm() {
+    return kerberosRealm;
+  }
+
+  public void setKerberosRealm(String kerberosRealm) {
+    this.kerberosRealm = kerberosRealm;
   }
 
 /**
@@ -977,6 +1008,7 @@ public class ClusterSpec {
         && Objects.equal(getAutoHostnamePrefix(), that.getAutoHostnamePrefix())
         && Objects.equal(getAutoHostnameSuffix(), that.getAutoHostnameSuffix())
         && Objects.equal(getJdkInstallUrl(), that.getJdkInstallUrl())
+        && Objects.equal(getKerberosRealm(), that.getKerberosRealm())
         ;
     }
     return false;
@@ -1012,7 +1044,8 @@ public class ClusterSpec {
         getAwsEc2PlacementGroup(),
         getAutoHostnamePrefix(),
         getAutoHostnameSuffix(),
-        getJdkInstallUrl()
+        getJdkInstallUrl(),
+        getKerberosRealm()
     );
   }
   
@@ -1044,10 +1077,12 @@ public class ClusterSpec {
       .add("stateStoreBlob", getStateStoreBlob())
       .add("awsEc2SpotPrice", getAwsEc2SpotPrice())
       .add("terminateAllOnLauchFailure",isTerminateAllOnLaunchFailure())
+      .add("storeClusterInEtcHosts",isStoreClusterInEtcHosts())
       .add("awsEc2PlacementGroup",getAwsEc2PlacementGroup())
       .add("autoHostnamePrefix",getAutoHostnamePrefix())
       .add("autoHostnameSuffix",getAutoHostnameSuffix())
       .add("jdkInstallUrl", getJdkInstallUrl())
+      .add("kerberosRealm", getKerberosRealm())
       .toString();
   }
 }
