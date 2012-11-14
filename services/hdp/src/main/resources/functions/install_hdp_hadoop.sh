@@ -70,6 +70,44 @@ EOF
   REGISTER_HORTONWORKS_REPO=1
 }
 
+function hdp_preflight_checks() {
+ #any preflight checks. 
+ 
+  # validate the hostname resolves and reaches itself.
+  # if this fails Hadoop won't come up, so bail out early with some basic diagnostics
+  
+  local hostname=`hostname`
+  if ! ping -c 5 $hostname
+  then
+    echo "This server does not know its own name, cannot resolve it via DNS or /etc/hosts -or cannot reach it"
+    echo "It's apparent hostname is '$hostname'"
+    echo 
+    echo "/etc/hosts is "
+    cat /etc/hosts
+    echo 
+    echo "/etc/resolv.conf is"
+    cat /etc/resolv.conf
+    echo 
+    exit 1;
+  fi
+
+  #look for yum. This generally fails because
+  #a debian image has been brought up instead
+  if ! `which yum`
+  then
+    echo "This server does not have yum installed"
+    echo "This installation requires it"
+    echo 
+    echo "Either this is not a RHEL-based system, or its path is corrupt "
+    echo "uname -a is"
+    uname -a
+    echo 
+    echo "PATH is $PATH"
+    echo 
+    exit 1;
+  fi
+ 
+}
 
 function install_hdp_hadoop() {
   local OPTIND
@@ -80,6 +118,7 @@ function install_hdp_hadoop() {
     echo "Hadoop is already installed."
     return;
   fi
+  hdp_preflight_checks
   
   #OS version to use. Also: centos5; suse11
   HADOOP_HOME=/usr/lib/hadoop
