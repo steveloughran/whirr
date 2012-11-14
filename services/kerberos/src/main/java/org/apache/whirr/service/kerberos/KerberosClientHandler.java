@@ -15,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.whirr.service.kerberos;
 
-package org.apache.whirr.service.hbase.integration;
+public class KerberosClientHandler extends KerberosBaseHandler {
 
-import org.junit.BeforeClass;
+  public static final String ROLE = "kerberosclient";
 
-public class HBase092SingleNodeServiceTest extends HBaseServiceTest {
-  @BeforeClass
-  public static void setUp() throws Exception {
-    controller = HBaseServiceController.getInstance("whirr-hbase-0.92-singlenode-test.properties");
-    controller.ensureClusterRunning();
+  @Override
+  public String getRole() {
+    return ROLE;
   }
+
 }

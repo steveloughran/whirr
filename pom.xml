@@ -56,6 +56,7 @@
     <module>services/mahout</module>
     <module>services/pig</module>
     <module>services/solr</module>
+    <module>services/kerberos</module>
     <module>services/hdp</module>
   </modules>
 
@@ -71,9 +72,9 @@
     <hadoop.version>1.0.3</hadoop.version>
     <hamcrest.version>1.1</hamcrest.version>
     <hama.version>0.4.0-incubating</hama.version>
-    <hbase.version>0.92.0</hbase.version>
+    <hbase.version>0.94.1</hbase.version>
     <jackson.version>1.5.2</jackson.version>
-    <jclouds.version>1.5.0</jclouds.version>
+    <jclouds.version>1.5.1</jclouds.version>
     <jdom.version>1.1</jdom.version>
     <jopt.simple.version>4.3</jopt.simple.version>
     <jsch.version>0.1.48</jsch.version>

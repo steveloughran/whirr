@@ -1,6 +1,20 @@
 Apache Whirr Change Log
 
-Release 0.8.1 (unreleased changes)
+Release 0.8.2 (unreleased changes)
+
+  IMPROVEMENTS
+
+    WHIRR-672. Allow eager caching of instance hostname based on pre-provision
+    instance metadata. (Graham Gear via tomwhite)
+
+    WHIRR-675. Convert all whirr.env.* environment variable labels to upper
+    case. (Graham Gear via tomwhite)
+
+    WHIRR-671. Create Kerberos Service. (Graham Gear via tomwhite)
+
+    WHIRR-679. Switch to HBase 0.94.2. (abayer via tomwhite)
+
+Release 0.8.1 - 2012-10-19
 
   NEW FEATURES
 
@@ -14,6 +28,11 @@ Release 0.8.1 (unreleased changes)
     WHIRR-649. Make install_cdh_hadoop.sh idempotent, fast failing if already
     run. (Graham Gear via tomwhite)
   
+    WHIRR-665. list of SSH commands should also identify host roles.
+    (Steve Loughran via tomwhite)
+
+    WHIRR-666. Upgrade to jclouds 1.5.1. (tomwhite)
+
   BUG FIXES
 
     WHIRR-641. Improved parsing of config ->
