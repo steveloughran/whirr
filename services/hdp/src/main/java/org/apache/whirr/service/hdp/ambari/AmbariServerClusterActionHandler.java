@@ -24,6 +24,7 @@ import org.apache.whirr.Cluster;
 import org.apache.whirr.ClusterSpec;
 import org.apache.whirr.service.ClusterActionEvent;
 import org.apache.whirr.service.FirewallManager;
+import org.apache.whirr.service.hdp.BadDeploymentException;
 import org.apache.whirr.service.hdp.hadoop.HdpConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +95,9 @@ public final class AmbariServerClusterActionHandler extends AbstractAmbariCluste
     Configuration conf = getConfiguration(clusterSpec);
     String domain = conf.getString(KEY_INTERNAL_DOMAIN_NAME, "");
     if(domain.isEmpty()) {
-      LOG.warn("No value provided for " + KEY_INTERNAL_DOMAIN_NAME + " -the worker file is unlikely to be valid");
+      String msg = "No value provided for " + KEY_INTERNAL_DOMAIN_NAME + " -the worker file and HTTPS scripts would be invalid";
+      LOG.warn(msg);
+      throw new BadDeploymentException(msg);
     }
     String configureFunction = conf.getString(
       KEY_CONFIGURE_FUNCTION,
