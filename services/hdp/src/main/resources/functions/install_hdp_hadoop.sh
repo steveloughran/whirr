@@ -93,20 +93,20 @@ function hdp_preflight_checks() {
 
   #look for yum. This generally fails because
   #a debian image has been brought up instead
-  if ! `which yum`
-  then
-    echo "This server does not have yum installed"
-    echo "This installation requires it"
-    echo 
-    echo "Either this is not a RHEL-based system, or its path is corrupt "
-    echo "uname -a is"
-    uname -a
-    echo 
-    echo "PATH is $PATH"
-    echo 
-    exit 1;
-  fi
- 
+#  if ! `which yum`
+#  then
+#    echo "This server does not have yum installed"
+#    echo "This installation requires it"
+#    echo 
+#    echo "Either this is not a RHEL-based system, or its path is corrupt "
+#    echo "uname -a is"
+#    uname -a
+#    echo 
+#    echo "PATH is $PATH"
+#    echo 
+#    exit 1;
+#  fi
+# 
 }
 
 function install_hdp_hadoop() {
