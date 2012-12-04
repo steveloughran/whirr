@@ -14,6 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+function make_hadoop_dirs_hdfs_user {
+  for mount in "$@"; do
+    if [ ! -e $mount/hadoop ]; then
+      mkdir -p $mount/hadoop
+      chown hadoop:hadoop $mount/hadoop
+    fi
+    if [ ! -e $mount/tmp ]; then
+      mkdir $mount/tmp
+      chmod a+rwxt $mount/tmp
+    fi
+  done
+}
+
 function configure_hdp_hadoop() {
   local OPTIND
   local OPTARG
@@ -30,7 +44,7 @@ function configure_hdp_hadoop() {
   HADOOP_HOME=/usr/lib/hadoop
   HADOOP_CONF_DIR=/etc/hadoop/conf
   
-  make_hadoop_dirs /data*
+  make_hadoop_dirs_hdfs_user /data*
 
   # Copy generated configuration files in place
   cp /tmp/{core,hdfs,mapred}-site.xml $HADOOP_CONF_DIR || exit 1;
