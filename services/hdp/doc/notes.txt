@@ -1,0 +1,339 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+http://www.slideshare.net/jclouds/how-to-write-a-whirr-service
+
+HDP installer scripts
+ -use CDH installation scripts for logic of setting up repositories
+   -deleted CDH3/4 logic
+   -comment out debian support (for now)
+  -patch locations to where HDP puts them (big top compatible)
+
+ -use cdh script to set up location of the conf directory
+  conf.whirr
+
+Repo source: 
+
+http://public-repo-1.hortonworks.com/HDP-1.0.0.12/repos/centos5/hdp-release-1.0.0.12-1.el5.noarch.rpm
+
+version 1.0.3-1
+
+cat hdp.repo 
+[HDP-1.0.0.12]
+name=Hortonworks Data Platform Version - HDP-1.0.0.12
+baseurl=http://public-repo-1.hortonworks.com/HDP-1.0.0.12/repos/centos5
+gpgcheck=0
+enabled=1
+priority=1
+
+
+Locations
+
+
+hadoop_install
+  HADOOP_HOME=/usr/local/hadoop
+  HADOOP_CONF_DIR=$HADOOP_HOME/conf
+
+HDP
+  
+  HADOOP_HOME=/usr/lib/hadoop
+  HADOOP_CONF_DIR=$HADOOP_HOME/conf
+  -> /etc/hadoop/conf
+  -> /etc/alternatives/hadoop-conf 
+  -> /etc/hadoop/conf.empty
+  
+  HADOOP_CONF
+  
+  
+setting up dirs: /var/run/hadoop
+drwxr-xr-x 2 hdfs   hadoop 4096 Aug  3 17:43 hdfs
+drwxrwxr-x 2 mapred mapred 4096 Jul 23 10:03 mapred
+
+commands
+
+bin/whirr list-cluster --config services/hdp/doc/hdp.properties
+
+bin/whirr launch-cluster --config services/hdp/doc/hdp-ec2-stevel.properties --max-startup-retries 1 --private-key-file  /Users/stevel/.ssh/id_rsa --public-key-file  /Users/stevel/.ssh/id_rsa.pub
+bin/whirr launch-cluster --config services/hdp/doc/hdp1.properties 
+
+Build and test
+
+mvn -DskipTests
+
+copies everything that cli/pom.xml depends on into cli/target/lib
+
+minimal build: compile services/hdp 
+
+ mvn install 
+ 
+then in whirr/cli
+
+mvn install -DskipTests
+
+#for offline builds
+
+mvn install -DskipTests  -offline
+
+#clean build
+mvn  clean install -DskipTests -offline
+# normal build
+pushd services/hdp && mvn  install -DskipTests -offline && popd && pushd cli && mvn install -DskipTests -offline && popd && bin/whirr launch-cluster --config services/hdp/conf/vbox/hdp1.properties 
+
+#run
+
+bin/whirr launch-cluster --config services/hdp/doc/hdp1.properties 
+
+
+EC2 BYON
+
+bin/whirr launch-cluster --config services/hdp/conf/ec2-byon/cluster.properties
+
+
+
+== Users ==
+
+HDP users
+mapred:x:495:488:Hadoop MapReduce:/usr/lib/hadoop:/bin/bash
+hdfs:x:494:489:Hadoop HDFS:/usr/lib/hadoop:/bin/bash
+
+
+
+hadoop:x:490:
+hdfs:x:489:
+mapred:x:488:
+
+
+=ASF users=
+
+#getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 123 -r hadoop
+#
+#/usr/sbin/useradd --comment "Hadoop MapReduce" -u 202 --shell /bin/bash -M -r -g hadoop --home /tmp mapred 2> /dev/null || :
+#/usr/sbin/useradd --comment "Hadoop HDFS" -u 201 --shell /bin/bash -M -r -g hadoop --home /tmp hdfs 2> /dev/null || :
+
+
+
+BYON setup
+-must have a user other than root to ssh in to -default
+ is local user
+
+-this must be able to sudo without needing a password
+ which can be done by editing /etc/sudoers : 
+ stevel ALL=(ALL)       NOPASSWD: ALL
+ 
+ [root@nn1 yum.repos.d]# yum list installed | grep hadoop
+ hadoop.x86_64                      1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-datanode.x86_64             1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-jobtracker.x86_64           1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-libhdfs.x86_64              1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-namenode.x86_64             1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-native.x86_64               1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-pipes.x86_64                1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-sbin.x86_64                 1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-secondarynamenode.x86_64    1.0.2-1.el6                 @HDP-1.0.7       
+ hadoop-tasktracker.x86_64          1.0.2-1.el6                 @HDP-1.0.7      
+ 
+ = Setting up EC2 =
+ 
+ EC2 cluster
+ 
+  bin/whirr launch-cluster --config services/hdp/conf/ec2-micro/cluster.properties
+  
+  bin/whirr list-cluster --config services/hdp/conf/ec2-micro/cluster.properties
+  bin/whirr destroy-cluster --config services/hdp/conf/ec2-micro/cluster.properties
+ 
+ 
+ 
+ 
+ #= Uninstalling whirr =
+ 
+ sudo bash
+ 
+ service hadoop-namenode stop
+ service hadoop-datanode stop
+ service hadoop-jobtracker stop
+ service hadoop-tasktracker stop
+ 
+ yum -y erase  hadoop hadoop-native hadoop-lzo-native
+ # verify
+ 
+ yum list installed | grep hadoop
+
+ # (this leaves some dangling things)
+
+ 
+ rm -rf /usr/lib/hadoop
+ rm -rf /var/log/hadoop
+ rm -rf /etc/hadoop/
+ userdel hdfs
+ userdel mapred
+ userdel hadoop
+ groupdel hadoop
+ groupdel hdfs
+ groupdel mapred
+ 
+ alternatives --remove hadoop-conf /etc/hadoop/conf.whirr
+ rm -rf /etc/hadoop/conf.whirr/
+ rm -rf /etc/hadoop/conf
+ 
+ rm -f /tmp/init-*
+ rm -rf /tmp/bootstrap-hadoop-*
+ rm -rf /tmp/configure-hadoop-*
+ rm -rf /data
+ 
+ 
+ hadoop-hdfs.dfs.webhdfs.enabled=true
+
+tuesday 
+
+send some blocks 2 eric about times mon/tue 2 yalk
+
+sales office london, sys people, hcat, pig
+
+have 1:1s w/ sanjay and others, 
+ambari in NJ, collaboration? 
+bring them in to hadoop. Ex bluestone/BEA. 
+
+whirr is tactical, MSFT in charge, will let up om 2013
+OOBE experience
+
+Next
+-whirr -> Ambari,
+op to park in short term
+
+ambari integration
+
+vmware? in the base,em
+-serengeti, if its oss then it's become
+
+vmware need a GTM strategy. 
+
+watch for someone w/ leverage in OpenStack. 
+
+storage under the v-space
+
+Ambari
+ -story for integrating w/ whirr
+ reach out to Mahadev?
+  design level review of API to make sure that everything that whirr/Ambari would need is on the plan.
+  -get commitment from them to do this w/ me
+  Q for mahadev -would it make sense to start now? 
+   identify changes that need to go into whirr
+   i
+   
+ plan for whirr
+  HDFS+ MR into apache whirr w/ bug fixes.
+  design review of ambari w/ mahadev on topic of Whirr/EC2 integration.
+  do a first pass on today's ambari so it can in
+   i. in a VM
+   ii. with a list of VMs, ssh in to targets
+   iii.
+   if you get it usuable, check it in to whirr -but that's not the real goal.
+ 
+ 
+ 2.0
+  -all HDP services w/ RESTy API
+  -use dir service to find things
+  -
+  
+Big ambari projects
+   security gateway -WS API to cluster.
+ -security
+ -WS
+ -who in the roadmap owns things?
+ 
+ handoff time won't be before Nove
+ 
+Beyond Whirr
+Jeff
+ -hw seln guide
+ -specific use cases
+ 
+basic comparisons between HDP and CDH -to talk about relative performance.
+
+Linux & ext4 options
+
+Condor April.
+
+master manager/ZK service launcher + restart.
+nanny N services on M nodes. 
+Add/remove masters
+
+AMBARI
+
+rpm -Uvh http://public-repo-1.hortonworks.com/HDP-1.0.1.14/repos/centos6/hdp-release-1.0.1.14-1.el6.noarch.rpm
+rpm -Uvh http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos6/hdp-release-1.1.0.15-1.el6.noarch.rpm
+rpm -Uvh http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos6/hdp-release-1.1.0.15-1.el6.noarch.rpm
+
+
+bin/whirr launch-cluster --config services/hdp/conf/vbox/ambari.properties
+
+pushd services/hdp; mvn  install -DskipTests -offline; popd; pushd cli; mvn install -DskipTests -offline; popd; bin/whirr launch-cluster --config services/hdp/conf/vbox/ambari.properties
+
+
+pushd services/hdp; mvn  install -DskipTests -offline; popd; pushd cli; mvn install -DskipTests -offline; popd; bin/whirr launch-cluster --config services/hdp/conf/ec2-micro/ambari.properties
+
+
+
+
+
+http://www.raskas.be/blog/category/linux-sysadmin/puppet/
+dl.fedoraproject.org
+
+
+
+Finished running configure phase scripts on all cluster instances
+ambari-server after: configure
+Completed configuration of hdp1
+Ambari web UI available at http://ec2-50-112-36-204.us-west-2.compute.amazonaws.com:80
+Wrote proxy script /Users/stevel/.whirr/hdp1/ambari-proxy.sh
+Worker list:
+10.252.90.117/10.252.90.117
+
+
+
+Ambari submit
+
+
+http://ec2-50-112-67-84.us-west-2.compute.amazonaws.com/hmc/html/index.php
+
+-> 
+http://ec2-50-112-67-84.us-west-2.compute.amazonaws.com/hmc/html/initializeCluster.php
+
+
+-> name
+
+Fill in 
+
+add  nodes
+
+-ssh key of private root key -needs to work for root in all worker  nodes
+-hosts file
+
+    
+New VM image. 
+
+wget http://public-repo-1.hortonworks.com/HDP-1.1.0.15/repos/centos6/hdp.repo
+
+ yum -y install epel-release
+ 
+ yum -y install hadoop hadoop-native hadoop-pipes hadoop-libhdfs  snappy snappy-devel snappy.i686 snappy-devel.i686  openssl hadoop-lzo lzo lzo-devel hadoop-lzo-native 
+ 
+ 
+
+ yum -y install  httpd  httpd-devel  mod_passenger mod_ssl pdsh php php-pdo php-pecl-json php-posix puppet ruby-devel rubygems sqlite
+

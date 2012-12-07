@@ -125,9 +125,10 @@ function install_hdp_hadoop() {
   #HADOOP_CONF_DIR=$HADOOP_HOME/conf
   HADOOP_CONF_DIR=/etc/hadoop/conf.whirr
 
-  HADOOP_PACKAGE="hadoop hadoop-native hadoop-pipes hadoop-libhdfs  snappy snappy-devel snappy.i686 snappy-devel.i686  openssl hadoop-lzo lzo lzo-devel hadoop-lzo-native "
-
-  echo "about to install $HADOOP_PACKAGE from HDP"
+  HADOOP_PACKAGE="hadoop hadoop-native hadoop-pipes hadoop-libhdfs hadoop-lzo lzo lzo-devel hadoop-lzo-native "
+#  SNAPPY_PACKAGE="snappy snappy-devel snappy.i686 snappy-devel.i686"
+  SNAPPY_PACKAGE="snappy snappy-devel"
+  OPENSSL_PACKAGE="openssl"
 
   hdp_register_hortonworks_repo
   
@@ -138,12 +139,14 @@ function install_hdp_hadoop() {
 #    update-alternatives --install /etc/$HADOOP/conf $HADOOP-conf $HADOOP_CONF_DIR 90
 #  elif which rpm &> /dev/null; then
   echo "about to install $HADOOP_PACKAGE"
-  retry_yum install -y $HADOOP_PACKAGE
   if ! retry_yum install -y $HADOOP_PACKAGE;
   then
     echo "Failed to Install $HADOOP_PACKAGE from yum"
     exit 1;
   fi
+
+   retry_yum install -y $SNAPPY_PACKAGE || exit 1
+
   
   #copy conf.empty to the new dir
   
@@ -175,10 +178,11 @@ getent passwd hdfs >/dev/null \
   || exit 1
 
 
-# symlink snappy in 
-ln -sf /usr/lib64/libsnappy.so /usr/lib/hadoop/lib/native/Linux-amd64-64/.
+# symlink snappy in
+# these tests are valid for both 64 bit and 32 bit versions
 
-#ln -sf /usr/lib/libsnappy.so /usr/lib/hadoop/lib/native/Linux-i386-32/.
+stat -L /usr/lib64/libsnappy.so && ln -sf /usr/lib64/libsnappy.so /usr/lib/hadoop/lib/native/Linux-amd64-64/.
+stat -L /usr/lib/libsnappy.so  && ln -sf /usr/lib/libsnappy.so /usr/lib/hadoop/lib/native/Linux-i386-32/.
 
   echo "Hadoop RPM installation and user configuration complete"
   INSTALL_HADOOP_DONE=1
